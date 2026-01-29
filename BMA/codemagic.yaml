@@ -29,17 +29,12 @@ workflows:
         script: |
           flutter pub run build_runner build --delete-conflicting-outputs
           
-      - name: Build APK
+      - name: Build APK for Android only
         script: |
-          flutter build apk --release
-          
-      - name: Build App Bundle
-        script: |
-          flutter build appbundle --release
+          flutter build apk --release --no-tree-shake-icons -v
           
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
-      - build/app/outputs/bundle/release/app-release.aab
       
     publishing:
       email:
