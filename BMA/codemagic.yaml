@@ -2,7 +2,7 @@ workflows:
   android-release:
     name: Android Release Build
     instance_type: mac_mini_m1
-    max_build_duration: 60
+    max_build_duration: 120
     
     environment:
       flutter: 3.13.0
@@ -12,8 +12,8 @@ workflows:
       - name: Get Flutter dependencies
         script: flutter pub get
           
-      - name: Build APK
-        script: flutter build apk --release
+      - name: Build APK (Release)
+        script: flutter build apk --release -v
           
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
@@ -21,7 +21,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - kalyanibadgujar@gmail.com
+          - mrkhushalchaudhari@gmail.com
         notify:
           success: true
           failure: true
