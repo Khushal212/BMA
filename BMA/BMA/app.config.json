@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "name": "BMA",
+  "description": "Business Management App - Vegetable Wholesaler",
+  "buildNumber": "1",
+  "buildTime": "2026-01-29",
+  "appVersion": "1.0.0+1",
+  "features": {
+    "customerManagement": true,
+    "itemManagement": true,
+    "invoiceGeneration": true,
+    "creditLimitTracking": true,
+    "paymentTracking": true,
+    "pdfGeneration": true,
+    "offlineStorage": true,
+    "whatsappShare": false,
+    "cloudSync": false
+  },
+  "database": {
+    "type": "SQLite",
+    "orm": "Drift",
+    "tables": [
+      "customers",
+      "items",
+      "invoices",
+      "invoiceLines",
+      "payments",
+      "settings"
+    ],
+    "schemaVersion": 1
+  },
+  "defaultValues": {
+    "creditLimit": 10000,
+    "gstPercent": 0,
+    "discountPercent": 0,
+    "invoiceNumberFormat": "INV-YYYYMM-XXXXX"
+  },
+  "supportedUnits": [
+    "kg",
+    "crate",
+    "bunch",
+    "box",
+    "bag"
+  ],
+  "paymentModes": [
+    "CASH",
+    "UPI",
+    "BANK"
+  ],
+  "paymentTypes": [
+    "CASH",
+    "UPI",
+    "BANK",
+    "CREDIT",
+    "MIXED"
+  ]
+}

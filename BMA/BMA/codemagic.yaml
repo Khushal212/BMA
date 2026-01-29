@@ -1,0 +1,30 @@
+workflows:
+  android-release:
+    name: Android Release Build
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    
+    environment:
+      flutter: stable
+      java: 11
+    
+    scripts:
+      - name: Get Flutter dependencies
+        script: flutter pub get
+          
+      - name: Generate database code
+        script: flutter pub run build_runner build --delete-conflicting-outputs
+          
+      - name: Build APK
+        script: flutter build apk --release
+          
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+      
+    publishing:
+      email:
+        recipients:
+          - kalyanibadgujar@gmail.com
+        notify:
+          success: true
+          failure: true
