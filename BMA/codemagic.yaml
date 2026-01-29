@@ -6,32 +6,17 @@ workflows:
     
     environment:
       flutter: stable
-      xcode: latest
       java: 11
-      
-    triggering:
-      events:
-        - push
-        - pull_request
-      branch:
-        patterns:
-          - pattern: main
-            include: true
-          - pattern: develop
-            include: true
-            
+    
     scripts:
       - name: Get Flutter dependencies
-        script: |
-          flutter pub get
+        script: flutter pub get
           
       - name: Generate database code
-        script: |
-          flutter pub run build_runner build --delete-conflicting-outputs
+        script: flutter pub run build_runner build --delete-conflicting-outputs
           
-      - name: Build APK for Android only
-        script: |
-          flutter build apk --release --no-tree-shake-icons -v
+      - name: Build APK
+        script: flutter build apk --release
           
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
