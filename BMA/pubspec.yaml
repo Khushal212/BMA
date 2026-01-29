@@ -1,0 +1,59 @@
+name: bma
+description: "Business Management App - Vegetable Wholesaler"
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  provider: ^6.0.0
+
+  # Database
+  drift: ^2.14.0
+  sqlite3_flutter_libs: ^0.5.0
+  path_provider: ^2.1.0
+  path: ^1.8.0
+
+  # UI & Utils
+  intl: ^0.19.0
+  uuid: ^4.0.0
+
+  # PDF & Sharing
+  pdf: ^3.10.0
+  printing: ^5.11.0
+  share_plus: ^7.2.0
+  url_launcher: ^6.2.0
+  file_picker: ^6.1.0
+
+  # Material Design
+  google_fonts: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+
+  # Code generation for Drift
+  drift_dev: ^2.14.0
+  build_runner: ^2.4.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+
+  fonts:
+    - family: GoogleSans
+      fonts:
+        - asset: assets/fonts/GoogleSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/GoogleSans-Bold.ttf
+          weight: 700
