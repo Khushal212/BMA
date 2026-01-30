@@ -1,4 +1,5 @@
 import 'package:drift/native.dart';
+import 'package:drift/native.dart';
 import 'package:drift/drift.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -195,21 +196,20 @@ class AppDatabase extends _$AppDatabase {
             ..orderBy([(p) => OrderingTerm(expression: p.paymentDate, mode: OrderingMode.desc)])
       ).get();
 
-  // LEDGER CALCULATIONS
-  Future<double> getCustomerOutstanding(String customerId) async {
-    final invoiceRows = await (select(invoices)
-          ..where((i) => i.customerId.equals(customerId)))
-        .get();
+  // Example fix pattern for the invoices/payments block:
+final invoiceRows = await (select(invoices)
+      ..where((i) => i.customerId.equals(customerId)))
+    .get();
 
-    final paymentRows = await (select(payments)
-          ..where((p) => p.customerId.equals(customerId)))
-        .get();
+final paymentRows = await (select(payments)
+      ..where((p) => p.customerId.equals(customerId)))
+    .get();
 
-  double totalInvoiceBalance = invoiceRows.fold(0.0, (sum, inv) => sum + inv.balanceAmount);
-  double totalPayments = paymentRows.fold(0.0, (sum, pay) => sum + pay.amount);
+final double totalInvoiceBalance =
+    invoiceRows.fold(0.0, (sum, inv) => sum + (inv.balanceAmount ?? 0));
 
-    return totalInvoiceBalance - totalPayments;
-  }
+final double totalPayments =
+    paymentRows.fold(0.0, (sum, pay) => sum + (pay.amount ?? 0));
 
   // STATISTICS
   Future<double> getTodaysSalesTotal() async {
