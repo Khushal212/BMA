@@ -1,0 +1,46 @@
+workflows:
+  android-apk-release:
+    name: Android APK Release
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+
+    environment:
+      flutter: 3.10.6
+      java: 11
+
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $HOME/.gradle/caches
+        - $HOME/.gradle/wrapper
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd BMA
+          flutter pub get
+
+      # Ensure Gradle wrapper exists (some repos miss it). This step creates wrapper scripts + jar.
+      # If Codemagic image already has Gradle, this will work.
+      - name: Generate Gradle wrapper (Gradle 7.5)
+        script: |
+          cd BMA/android
+          gradle wrapper --gradle-version 7.5 --distribution-type all || true
+          ls -la gradle/wrapper || true
+
+      - name: Build APK (Release)
+        script: |
+          cd BMA
+          flutter build apk --release
+
+    artifacts:
+      - BMA/build/app/outputs/flutter-apk/app-release.apk
+      - BMA/build/app/outputs/mapping/release/mapping.txt
+
+    publishing:
+      email:
+        recipients:
+          - kalyanibadgujar@gmail.com
+        notify:
+          success: true
+          failure: true
