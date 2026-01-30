@@ -5,7 +5,7 @@ workflows:
     max_build_duration: 120
 
     environment:
-      flutter: 3.10.6
+      flutter: 3.22.0
       java: 11
 
     cache:
@@ -40,7 +40,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - kalyanibadgujar@gmail.com
+          - mrkhushalchaudhari@gmail.com
         notify:
           success: true
           failure: true
