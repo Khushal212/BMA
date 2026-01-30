@@ -26,8 +26,17 @@ apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
-    namespace "com.example.bma"
+    namespace "com.example.bma" // change to your app id if needed
     compileSdkVersion 32
+
+    defaultConfig {
+        applicationId "com.example.bma" // change to your package
+        minSdkVersion 21
+        targetSdkVersion 32
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -35,24 +44,15 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
-    }
-
-    sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
-    }
-
-    defaultConfig {
-        applicationId "com.example.bma"
-        minSdkVersion 21
-        targetSdkVersion 32
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        jvmTarget = "1.8"
     }
 
     buildTypes {
         release {
+            // Provide your release signing config or use debug for testing
             signingConfig signingConfigs.debug
+            minifyEnabled false
+            // proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 }
