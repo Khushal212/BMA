@@ -50,15 +50,15 @@ android {
     }
 
     buildTypes {
-        release {
-            // For CI/demo builds. Replace with your release signingConfig for production.
-            signingConfig signingConfigs.debug
-            minifyEnabled false
-        }
-        debug {
-            signingConfig signingConfigs.debug
-        }
+    release {
+        signingConfig signingConfigs.debug   // or your release signing
+        minifyEnabled true
+        shrinkResources true
+
+        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
     }
+}
+
 }
 
 flutter {
