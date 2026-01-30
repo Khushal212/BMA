@@ -1,1 +1,32 @@
-include ':app'
+// android/settings.gradle
+import java.util.Properties
+
+pluginManagement {
+    // Find Flutter SDK from local.properties
+    def flutterSdkPath = {
+        def properties = new Properties()
+        file("local.properties").withInputStream { properties.load(it) }
+        def flutterSdkPath = properties.getProperty("flutter.sdk")
+        assert flutterSdkPath != null : "flutter.sdk not set in local.properties"
+        return flutterSdkPath
+    }()
+
+    // Make the Flutter plugin available to the plugin DSL
+    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+// Declare plugins and AGP/Kotlin versions here.
+// Replace {agpVersion} and {kotlinVersion} if you want other versions.
+plugins {
+    id "dev.flutter.flutter-plugin-loader" version "1.0.0" // loader for Flutter plugin (should be present)
+    id "com.android.application" version "7.4.1" apply false
+    id "org.jetbrains.kotlin.android" version "1.8.20" apply false
+}
+
+include ":app"
