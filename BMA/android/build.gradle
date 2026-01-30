@@ -1,4 +1,6 @@
 // android/build.gradle (PROJECT LEVEL)
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 buildscript {
     ext.kotlin_version = '1.7.10'
