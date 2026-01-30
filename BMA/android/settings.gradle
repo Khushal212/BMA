@@ -1,3 +1,1 @@
-// android/settings.gradle
-rootProject.name = 'BMA'  // change this only if your project name is different
 include ':app'
