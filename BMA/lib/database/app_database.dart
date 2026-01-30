@@ -205,8 +205,8 @@ class AppDatabase extends _$AppDatabase {
           ..where((p) => p.customerId.equals(customerId)))
         .get();
 
-    double totalInvoiceBalance = invoices.fold(0, (sum, inv) => sum + inv.balanceAmount);
-    double totalPayments = payments.fold(0, (sum, pay) => sum + pay.amount);
+  double totalInvoiceBalance = invoiceRows.fold(0.0, (sum, inv) => sum + inv.balanceAmount);
+  double totalPayments = paymentRows.fold(0.0, (sum, pay) => sum + pay.amount);
 
     return totalInvoiceBalance - totalPayments;
   }
