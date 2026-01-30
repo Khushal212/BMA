@@ -197,11 +197,11 @@ class AppDatabase extends _$AppDatabase {
 
   // LEDGER CALCULATIONS
   Future<double> getCustomerOutstanding(String customerId) async {
-    final invoices = await (select(invoices)
+    final invoiceRows = await (select(invoices)
           ..where((i) => i.customerId.equals(customerId)))
         .get();
 
-    final payments = await (select(payments)
+    final paymentRows = await (select(payments)
           ..where((p) => p.customerId.equals(customerId)))
         .get();
 
