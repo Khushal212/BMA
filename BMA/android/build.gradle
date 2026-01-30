@@ -1,30 +1,63 @@
-// android/build.gradle (PROJECT LEVEL)
-
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.20"
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
     }
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+
+// On CI (Codemagic), local.properties may not exist.
+// Flutter sets FLUTTER_ROOT; use it as fallback.
+if (flutterRoot == null) {
+    flutterRoot = System.getenv("FLUTTER_ROOT")
+}
+
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. local.properties missing flutter.sdk and FLUTTER_ROOT env not set.")
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
+def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+android {
+    namespace "com.example.bma"  // change to your package
+    compileSdkVersion 33
+
+    defaultConfig {
+        applicationId "com.example.bma" // change to your package
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+        }
     }
 }
 
-rootProject.buildDir = new File(rootProject.projectDir, '../build')
-
-subprojects {
-    project.buildDir = new File(rootProject.projectDir, "../${project.name}/build")
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
+flutter {
+    source '../..'
 }
