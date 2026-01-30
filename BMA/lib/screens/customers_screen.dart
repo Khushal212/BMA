@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import '../database/app_database.dart';
-import '../models/customer.dart';
+import 'package:bma/database/app_database.dart' as db;
+import '../models/customer.dart' as m;
 import 'customer_detail_screen.dart';
 
 class CustomersScreen extends StatefulWidget {
