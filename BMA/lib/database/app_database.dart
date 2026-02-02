@@ -196,20 +196,6 @@ class AppDatabase extends _$AppDatabase {
             ..orderBy([(p) => OrderingTerm(expression: p.paymentDate, mode: OrderingMode.desc)])
       ).get();
 
-  // Example fix pattern for the invoices/payments block:
-final invoiceRows = await (select(invoices)
-      ..where((i) => i.customerId.equals(customerId)))
-    .get();
-
-final paymentRows = await (select(payments)
-      ..where((p) => p.customerId.equals(customerId)))
-    .get();
-
-final double totalInvoiceBalance =
-    invoiceRows.fold(0.0, (sum, inv) => sum + (inv.balanceAmount ?? 0));
-
-final double totalPayments =
-    paymentRows.fold(0.0, (sum, pay) => sum + (pay.amount ?? 0));
 
   // STATISTICS
   Future<double> getTodaysSalesTotal() async {
