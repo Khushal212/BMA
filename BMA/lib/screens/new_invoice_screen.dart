@@ -125,13 +125,21 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                     onPressed: () {
                       // Example: create generator lines (uses gen.InvoiceLineData - resolves conflict)
                       final genLines = lines
-                          .where((l) => l.itemId != null)
-                          .map((l) => gen.InvoiceLineData(
-                                itemId: l.itemId!,
-                                quantity: l.qty,
-                                rate: l.rate,
-                              ))
-                          .toList();
+                        .where((l) => l.itemId != null)
+                        .map((l) {
+                      final selectedItem = items.where((it) => it.id == l.itemId).isNotEmpty
+                      ? items.firstWhere((it) => it.id == l.itemId)
+                    : null;
+
+                    return gen.InvoiceLineData(
+                    itemName: selectedItem?.name ?? 'Item',
+                    qty: l.qty,
+                    unit: selectedItem?.unit ?? '',
+                    rate: l.rate,
+                    );
+                  })
+            .toList();
+
 
                       // TODO: call your actual save method here.
                       ScaffoldMessenger.of(context).showSnackBar(
