@@ -6,6 +6,7 @@
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher">
+        android:theme="@style/LaunchTheme">
         <activity
             android:name=".MainActivity"
             android:exported="true"
