@@ -229,7 +229,7 @@ class AppDatabase extends _$AppDatabase {
           ..where((i) => i.invoiceDate.isBetweenValues(startOfDay, endOfDay)))
         .get();
 
-    return result.fold(0, (sum, inv) => sum + inv.total);
+    return result.fold<double>(0.0, (sum, inv) => sum + (inv.total ?? 0));
   }
 
   Future<double> getTotalOutstanding() async {
