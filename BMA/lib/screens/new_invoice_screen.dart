@@ -58,99 +58,115 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                 future: _loadItems(),
                 builder: (context, snap) {
                   final items = snap.data ?? [];
-                  return ListView.builder(
-                    itemCount: lines.length,
-                    itemBuilder: (context, idx) {
-                      final line = lines[idx];
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            children: [
-                              DropdownButtonFormField<String>(
-                                value: line.itemId,
-                                decoration: const InputDecoration(
-                                  labelText: 'Item',
-                                  border: OutlineInputBorder(),
+
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: lines.length,
+                          itemBuilder: (context, idx) {
+                            final line = lines[idx];
+                            return Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  children: [
+                                    DropdownButtonFormField<String>(
+                                      value: line.itemId,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Item',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      items: items
+                                          .map<DropdownMenuItem<String>>((it) {
+                                        return DropdownMenuItem<String>(
+                                          value: it.id,
+                                          child: Text(it.name ?? 'Unnamed'),
+                                        );
+                                      }).toList(),
+                                      onChanged: (v) =>
+                                          setState(() => line.itemId = v),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      initialValue: line.qty.toString(),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Quantity',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      onChanged: (v) => setState(() =>
+                                          line.qty = double.tryParse(v) ?? 1),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      initialValue: line.rate.toString(),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Rate',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      onChanged: (v) => setState(() =>
+                                          line.rate = double.tryParse(v) ?? 0),
+                                    ),
+                                  ],
                                 ),
-                                items: items.map<DropdownMenuItem<String>>((it) {
-                                  return DropdownMenuItem<String>(
-                                    value: it.id,
-                                    child: Text(it.name ?? 'Unnamed'),
-                                  );
-                                }).toList(),
-                                onChanged: (v) => setState(() => line.itemId = v),
                               ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                initialValue: line.qty.toString(),
-                                decoration: const InputDecoration(
-                                  labelText: 'Quantity',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (v) => setState(() => line.qty = double.tryParse(v) ?? 1),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                initialValue: line.rate.toString(),
-                                decoration: const InputDecoration(
-                                  labelText: 'Rate',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (v) => setState(() => line.rate = double.tryParse(v) ?? 0),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  setState(() => lines.add(_Line())),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Add Line'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final genLines = lines
+                                    .where((l) => l.itemId != null)
+                                    .map((l) {
+                                      final selectedItem = items
+                                              .where((it) => it.id == l.itemId)
+                                              .isNotEmpty
+                                          ? items.firstWhere(
+                                              (it) => it.id == l.itemId)
+                                          : null;
+
+                                      return gen.InvoiceLineData(
+                                        itemName:
+                                            selectedItem?.name ?? 'Item',
+                                        qty: l.qty,
+                                        unit: selectedItem?.unit ?? '',
+                                        rate: l.rate,
+                                      );
+                                    })
+                                    .toList();
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Lines prepared: ${genLines.length}'),
+                                  ),
+                                );
+                              },
+                              child: const Text('Generate / Save'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   );
                 },
               ),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => setState(() => lines.add(_Line())),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Line'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Example: create generator lines (uses gen.InvoiceLineData - resolves conflict)
-                      final genLines = lines
-                        .where((l) => l.itemId != null)
-                        .map((l) {
-                      final selectedItem = items.where((it) => it.id == l.itemId).isNotEmpty
-                      ? items.firstWhere((it) => it.id == l.itemId)
-                    : null;
-
-                    return gen.InvoiceLineData(
-                    itemName: selectedItem?.name ?? 'Item',
-                    qty: l.qty,
-                    unit: selectedItem?.unit ?? '',
-                    rate: l.rate,
-                    );
-                  })
-            .toList();
-
-
-                      // TODO: call your actual save method here.
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Lines prepared: ${genLines.length}')),
-                      );
-                    },
-                    child: const Text('Generate / Save'),
-                  ),
-                ),
-              ],
-            )
           ],
         ),
       ),
