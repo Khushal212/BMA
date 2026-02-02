@@ -19,6 +19,28 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
+  Future<double> getCustomerOutstanding(String customerId) async {
+  final invoiceRows = await (select(invoices)
+        ..where((i) => i.customerId.equals(customerId)))
+      .get();
+
+  final paymentRows = await (select(payments)
+        ..where((p) => p.customerId.equals(customerId)))
+      .get();
+
+  final totalInvoiceBalance = invoiceRows.fold<double>(
+    0.0,
+    (sum, inv) => sum + (inv.balanceAmount ?? 0),
+  );
+
+  final totalPayments = paymentRows.fold<double>(
+    0.0,
+    (sum, pay) => sum + (pay.amount ?? 0),
+  );
+
+  return totalInvoiceBalance - totalPayments;
+}
+
   AppDatabase() : super(_openConnection());
 
   @override
