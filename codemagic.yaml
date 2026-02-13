@@ -41,7 +41,7 @@ workflows:
           cd $PROJECT_DIR
           flutter clean
           flutter pub get
-          flutter build apk --release --split-per-abi=false
+          flutter build apk --release
 
           echo "=== flutter-apk output ==="
           ls -la build/app/outputs/flutter-apk || true
