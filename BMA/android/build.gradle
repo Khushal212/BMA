@@ -9,9 +9,6 @@ buildscript {
     }
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
+// IMPORTANT:
+// Do NOT add repositories in allprojects{} when repositoriesMode is set to FAIL_ON_PROJECT_REPOS in settings.gradle.
+// Repositories must be declared only in settings.gradle.
