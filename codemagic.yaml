@@ -39,13 +39,21 @@ workflows:
       - name: Build APK (Release)
         script: |
           cd $PROJECT_DIR
-          flutter build apk --release
+          flutter clean
+          flutter pub get
+          flutter build apk --release --split-per-abi=false
+
+          echo "=== flutter-apk output ==="
+          ls -la build/app/outputs/flutter-apk || true
+
+          echo "=== all apks under build ==="
+          find build -type f -name "*.apk" || true
 
     artifacts:
-      - BMA/build/app/outputs/flutter-apk/app-release.apk
-      - BMA/build/**/outputs/**/mapping.txt
+      - build/app/outputs/flutter-apk/app-release.apk
+      - build/**/outputs/**/mapping.txt
 
     publishing:
       email:
         recipients:
-          - khushalc@fynd-external.com
+          - mrkhushalchaudhari@gmail.com
