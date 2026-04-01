@@ -2,60 +2,43 @@ workflows:
   android-apk-release:
     name: Android APK Release
     max_build_duration: 60
-
     environment:
       flutter: 3.22.3
       java: 17
       vars:
         PROJECT_DIR: "BMA"
-
     cache:
       cache_paths:
         - $HOME/.pub-cache
         - $HOME/.gradle/caches
         - $HOME/.gradle/wrapper
-
     scripts:
       - name: Print environment
         script: |
           flutter --version
           dart --version
           java -version
-          echo "Working directory:"
-          pwd
-          echo "Project dir: $PROJECT_DIR"
-          ls -la
-
+          pwd && ls -la
       - name: Install dependencies
         script: |
           cd $PROJECT_DIR
           flutter pub get
-
-      - name: Run code generation (build_runner)
+      - name: Run code generation
         script: |
           cd $PROJECT_DIR
-          flutter pub run build_runner build --delete-conflicting-outputs
-
-      - name: Build APK (Release)
+          dart run build_runner build --delete-conflicting-outputs
+      - name: Build release APK
         script: |
           cd $PROJECT_DIR
           flutter clean
           flutter pub get
           flutter build apk --release
-
-          echo "=== LIST build outputs ==="
-          ls -R build || true
-
-          echo "=== LIST android outputs ==="
-          ls -R android/app/build/outputs || true
-
     artifacts:
-    - $PROJECT_DIR/build/app/outputs/flutter-apk/*.apk
-    - $PROJECT_DIR/build/app/outputs/apk/release/*.apk
-    - $PROJECT_DIR/android/app/build/outputs/apk/release/*.apk
-    - $PROJECT_DIR/**/mapping.txt
-
+      - $PROJECT_DIR/build/app/outputs/flutter-apk/*.apk
     publishing:
       email:
         recipients:
           - mrkhushalchaudhari@gmail.com
+        notify:
+          success: true
+          failure: true
