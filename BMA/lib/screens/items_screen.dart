@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:drift/drift.dart' show Value;
 import '../database/app_database.dart';
 
 class ItemsScreen extends StatefulWidget {
@@ -171,7 +172,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
       await db.updateItem(existing.copyWith(
         name: nameCtrl.text.trim(),
         unit: unit,
-        defaultRate: rate,
+        defaultRate: Value(rate),
         gstPercent: gst,
       ));
     }
