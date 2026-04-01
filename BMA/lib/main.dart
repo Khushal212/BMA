@@ -50,7 +50,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final localeProvider = context.watch<LocaleProvider>();
     return MaterialApp(
-      title: 'BMA',
+      title: 'VyapaarX',
       debugShowCheckedModeBanner: false,
       locale: localeProvider.locale,
       supportedLocales: AppLanguages.supported,
