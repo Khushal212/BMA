@@ -19,22 +19,35 @@ workflows:
           dart --version
           java -version
           pwd && ls -la
+
       - name: Install dependencies
         script: |
           cd $PROJECT_DIR
           flutter pub get
+
       - name: Run code generation
         script: |
           cd $PROJECT_DIR
           dart run build_runner build --delete-conflicting-outputs
+
       - name: Build release APK
         script: |
           cd $PROJECT_DIR
           flutter clean
           flutter pub get
           flutter build apk --release
+          echo "=== Searching for APK ==="
+          find . -name "*.apk" 2>/dev/null
+          echo "=== Build outputs ==="
+          ls -la build/app/outputs/flutter-apk/ || true
+          cp build/app/outputs/flutter-apk/app-release.apk /Users/builder/clone/app-release.apk || true
+
     artifacts:
-      - $PROJECT_DIR/build/app/outputs/flutter-apk/*.apk
+      - BMA/build/app/outputs/flutter-apk/app-release.apk
+      - BMA/build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/*.apk
+      - "**/app-release.apk"
+
     publishing:
       email:
         recipients:
