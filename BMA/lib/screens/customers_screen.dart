@@ -148,12 +148,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
       );
     } else {
       await db.updateCustomer(existing.copyWith(
-        name: Value(nameCtrl.text.trim()),
-        phone: Value(phoneCtrl.text.trim()),
-        address: Value(addrCtrl.text.trim().isEmpty
+        name: nameCtrl.text.trim(),
+        phone: phoneCtrl.text.trim(),
+        address: addrCtrl.text.trim().isEmpty
             ? null
-            : addrCtrl.text.trim()),
-        creditLimit: Value(double.parse(limitCtrl.text.trim())),
+            : addrCtrl.text.trim(),
+        creditLimit: double.parse(limitCtrl.text.trim()),
       ));
     }
     _loadCustomers();
