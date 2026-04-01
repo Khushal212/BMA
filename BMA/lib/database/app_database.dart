@@ -286,4 +286,133 @@ LazyDatabase _openConnection() {
     final file = File(p.join(dbFolder.path, 'bma.db'));
     return NativeDatabase.createInBackground(file);
   });
+  // ── DAILY SUMMARY ─────────────────────────────────────────────
+  Future<DailySummary> getDailySummary(DateTime date) async {
+    final start = DateTime(date.year, date.month, date.day)
+        .millisecondsSinceEpoch;
+    final end =
+        DateTime(date.year, date.month, date.day, 23, 59, 59)
+            .millisecondsSinceEpoch;
+
+    final dayInvoices = await (select(invoices)
+          ..where(
+              (i) => i.invoiceDate.isBetweenValues(start, end))
+          ..orderBy([(i) => OrderingTerm(
+              expression: i.invoiceDate,
+              mode: OrderingMode.desc)]))
+        .get();
+
+    final result = <DailyInvoiceDetail>[];
+    for (final inv in dayInvoices) {
+      final customer = await getCustomer(inv.customerId);
+      final lines = await getInvoiceLines(inv.id);
+      result.add(DailyInvoiceDetail(
+        id: inv.id,
+        invoiceNo: inv.invoiceNo,
+        invoiceDate: inv.invoiceDate,
+        customerName: customer?.name ?? 'Unknown',
+        total: inv.total,
+        paidAmount: inv.paidAmount,
+        balanceAmount: inv.balanceAmount,
+        subtotal: inv.subtotal,
+        discountAmount: inv.discountAmount,
+        gstAmount: inv.gstAmount,
+        lines: lines,
+      ));
+    }
+
+    final totalSales =
+        result.fold<double>(0, (s, i) => s + i.total);
+    final collected =
+        result.fold<double>(0, (s, i) => s + i.paidAmount);
+    final pending =
+        result.fold<double>(0, (s, i) => s + i.balanceAmount);
+
+    return DailySummary(
+      totalSales: totalSales,
+      collected: collected,
+      pending: pending,
+      invoices: result,
+    );
+  }
+
+  // ── ALL INVOICES WITH CUSTOMER NAME ───────────────────────────
+  Future<List<InvoiceWithCustomer>> getAllInvoicesWithCustomers() async {
+    final allInvoices = await (select(invoices)
+          ..orderBy([(i) => OrderingTerm(
+              expression: i.invoiceDate,
+              mode: OrderingMode.desc)]))
+        .get();
+
+    final result = <InvoiceWithCustomer>[];
+    for (final inv in allInvoices) {
+      final customer = await getCustomer(inv.customerId);
+      result.add(InvoiceWithCustomer(
+        id: inv.id,
+        invoiceNo: inv.invoiceNo,
+        invoiceDate: inv.invoiceDate,
+        customerName: customer?.name ?? 'Unknown',
+        total: inv.total,
+        paidAmount: inv.paidAmount,
+        balanceAmount: inv.balanceAmount,
+        subtotal: inv.subtotal,
+        discountAmount: inv.discountAmount,
+        gstAmount: inv.gstAmount,
+      ));
+    }
+    return result;
+  }
+}
+
+// ── DATA CLASSES ───────────────────────────────────────────────
+class DailySummary {
+  final double totalSales, collected, pending;
+  final List<DailyInvoiceDetail> invoices;
+  DailySummary({
+    required this.totalSales,
+    required this.collected,
+    required this.pending,
+    required this.invoices,
+  });
+}
+
+class DailyInvoiceDetail {
+  final String id, invoiceNo, customerName;
+  final int invoiceDate;
+  final double total, paidAmount, balanceAmount,
+      subtotal, discountAmount, gstAmount;
+  final List<InvoiceLine> lines;
+  DailyInvoiceDetail({
+    required this.id,
+    required this.invoiceNo,
+    required this.invoiceDate,
+    required this.customerName,
+    required this.total,
+    required this.paidAmount,
+    required this.balanceAmount,
+    required this.subtotal,
+    required this.discountAmount,
+    required this.gstAmount,
+    required this.lines,
+  });
+}
+
+class InvoiceWithCustomer {
+  final String id, invoiceNo, customerName;
+  final int invoiceDate;
+  final double total, paidAmount, balanceAmount,
+      subtotal, discountAmount, gstAmount;
+  InvoiceWithCustomer({
+    required this.id,
+    required this.invoiceNo,
+    required this.invoiceDate,
+    required this.customerName,
+    required this.total,
+    required this.paidAmount,
+    required this.balanceAmount,
+    required this.subtotal,
+    required this.discountAmount,
+    required this.gstAmount,
+  });
+}
 }
