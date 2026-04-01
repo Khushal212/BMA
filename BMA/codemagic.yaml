@@ -1,46 +1,57 @@
 workflows:
   android-apk-release:
     name: Android APK Release
-    instance_type: mac_mini_m1
-    max_build_duration: 120
-
+    max_build_duration: 60
     environment:
-      flutter: 3.10.6
-      java: 11
-
+      flutter: 3.22.3
+      java: 17
+      vars:
+        PROJECT_DIR: "BMA"
     cache:
       cache_paths:
         - $HOME/.pub-cache
         - $HOME/.gradle/caches
         - $HOME/.gradle/wrapper
-
     scripts:
+      - name: Print environment
+        script: |
+          flutter --version
+          dart --version
+          java -version
+          pwd && ls -la
+
       - name: Install dependencies
         script: |
-          cd BMA
+          cd $PROJECT_DIR
           flutter pub get
 
-      # Ensure Gradle wrapper exists (some repos miss it). This step creates wrapper scripts + jar.
-      # If Codemagic image already has Gradle, this will work.
-      - name: Generate Gradle wrapper (Gradle 7.5)
+      - name: Run code generation
         script: |
-          cd BMA/android
-          gradle wrapper --gradle-version 7.5 --distribution-type all || true
-          ls -la gradle/wrapper || true
+          cd $PROJECT_DIR
+          dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build APK (Release)
+      - name: Build release APK
         script: |
-          cd BMA
+          cd $PROJECT_DIR
+          flutter clean
+          flutter pub get
           flutter build apk --release
+          echo "=== Searching for APK ==="
+          find . -name "*.apk" 2>/dev/null
+          echo "=== Build outputs ==="
+          ls -la build/app/outputs/flutter-apk/ || true
+          cp build/app/outputs/flutter-apk/app-release.apk /Users/builder/clone/app-release.apk || true
 
     artifacts:
       - BMA/build/app/outputs/flutter-apk/app-release.apk
-      - BMA/build/app/outputs/mapping/release/mapping.txt
+      - BMA/build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/*.apk
+      - "**/app-release.apk"
 
     publishing:
       email:
         recipients:
-          - kalyanibadgujar@gmail.com
+          - mrkhushalchaudhari@gmail.com
         notify:
           success: true
           failure: true
