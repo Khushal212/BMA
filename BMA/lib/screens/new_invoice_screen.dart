@@ -1,181 +1,490 @@
 import 'package:flutter/material.dart';
-import 'package:bma/database/app_database.dart' as db;
-import 'package:bma/utils/invoice_generator.dart' as gen;
+import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
+import '../database/app_database.dart';
 
 class NewInvoiceScreen extends StatefulWidget {
-  const NewInvoiceScreen({super.key});
+  const NewInvoiceScreen({Key? key}) : super(key: key);
 
   @override
-  State<NewInvoiceScreen> createState() => _NewInvoiceScreenState();
+  State<NewInvoiceScreen> createState() =>
+      _NewInvoiceScreenState();
+}
+
+class _InvoiceLine {
+  String? itemId;
+  String itemName = '';
+  String unit = '';
+  double qty = 1;
+  double rate = 0;
+  double gstPercent = 0;
+
+  double get lineSubtotal => qty * rate;
+  double get lineGstAmount => lineSubtotal * gstPercent / 100;
+  double get lineTotal => lineSubtotal + lineGstAmount;
 }
 
 class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
-  final db.AppDatabase database = db.AppDatabase();
+  String? _selectedCustomerId;
+  Customer? _selectedCustomer;
+  double _customerOutstanding = 0;
 
-  String? selectedCustomerId;
-  final List<_Line> lines = [];
+  final List<_InvoiceLine> _lines = [];
+  double _discountPercent = 0;
+  String _paymentType = 'CREDIT';
+  double _paidAmount = 0;
+  bool _saving = false;
+
+  List<Customer> _customers = [];
+  List<Item> _items = [];
 
   @override
   void initState() {
     super.initState();
-    lines.add(_Line());
+    _lines.add(_InvoiceLine());
+    _loadData();
   }
 
-  Future<List<db.Customer>> _loadCustomers() => database.getAllCustomers();
-  Future<List<db.Item>> _loadItems() => database.getAllItems();
+  Future<void> _loadData() async {
+    final db = context.read<AppDatabase>();
+    final customers = await db.getAllCustomers();
+    final items = await db.getAllItems();
+    if (mounted) {
+      setState(() {
+        _customers = customers;
+        _items = items;
+      });
+    }
+  }
+
+  Future<void> _onCustomerChanged(String? id) async {
+    if (id == null) return;
+    final db = context.read<AppDatabase>();
+    final customer = await db.getCustomer(id);
+    final outstanding = await db.getCustomerOutstanding(id);
+    if (mounted) {
+      setState(() {
+        _selectedCustomerId = id;
+        _selectedCustomer = customer;
+        _customerOutstanding = outstanding;
+      });
+    }
+  }
+
+  double get _subtotal =>
+      _lines.fold(0.0, (s, l) => s + l.lineSubtotal);
+  double get _discountAmount =>
+      _subtotal * _discountPercent / 100;
+  double get _gstAmount =>
+      _lines.fold(0.0, (s, l) => s + l.lineGstAmount);
+  double get _total =>
+      _subtotal - _discountAmount + _gstAmount;
+  double get _balanceAmount {
+    if (_paymentType == 'CREDIT') return _total;
+    return (_total - _paidAmount).clamp(0.0, double.infinity);
+  }
+
+  bool get _willExceedLimit =>
+      _selectedCustomer != null &&
+      (_customerOutstanding + _balanceAmount) >
+          _selectedCustomer!.creditLimit;
+
+  Future<void> _saveInvoice() async {
+    if (_selectedCustomerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Please select a customer')));
+      return;
+    }
+    final validLines = _lines
+        .where((l) => l.itemId != null && l.qty > 0)
+        .toList();
+    if (validLines.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Add at least one item')));
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      final db = context.read<AppDatabase>();
+      final invoiceNo = await db.generateInvoiceNo();
+      final invoiceId = const Uuid().v4();
+
+      final lineData = validLines
+          .map((l) => InvoiceLineData(
+                id: const Uuid().v4(),
+                itemId: l.itemId!,
+                itemName: l.itemName,
+                qty: l.qty,
+                unit: l.unit,
+                rate: l.rate,
+                lineSubtotal: l.lineSubtotal,
+                lineGstPercent: l.gstPercent,
+                lineGstAmount: l.lineGstAmount,
+                lineTotal: l.lineTotal,
+              ))
+          .toList();
+
+      await db.createInvoice(
+        id: invoiceId,
+        invoiceNo: invoiceNo,
+        customerId: _selectedCustomerId!,
+        lines: lineData,
+        subtotal: _subtotal,
+        discountPercent: _discountPercent,
+        discountAmount: _discountAmount,
+        gstAmount: _gstAmount,
+        total: _total,
+        paidAmount:
+            _paymentType == 'CREDIT' ? 0 : _paidAmount,
+        balanceAmount: _balanceAmount,
+        paymentType: _paymentType,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invoice $invoiceNo saved'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {
+          _selectedCustomerId = null;
+          _selectedCustomer = null;
+          _customerOutstanding = 0;
+          _lines.clear();
+          _lines.add(_InvoiceLine());
+          _discountPercent = 0;
+          _paymentType = 'CREDIT';
+          _paidAmount = 0;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_saving) {
+      return const Scaffold(
+          body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
-      appBar: AppBar(title: const Text('New Invoice')),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
+      appBar: AppBar(
+          title: const Text('New Invoice'),
+          centerTitle: true),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FutureBuilder<List<db.Customer>>(
-              future: _loadCustomers(),
-              builder: (context, snap) {
-                final customers = snap.data ?? [];
-                return DropdownButtonFormField<String>(
-                  value: selectedCustomerId,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Customer',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: customers.map<DropdownMenuItem<String>>((c) {
-                    return DropdownMenuItem<String>(
-                      value: c.id,
-                      child: Text(c.name ?? 'Unnamed'),
-                    );
-                  }).toList(),
-                  onChanged: (v) => setState(() => selectedCustomerId = v),
-                );
-              },
+            // Customer selector
+            DropdownButtonFormField<String>(
+              value: _selectedCustomerId,
+              decoration: const InputDecoration(
+                labelText: 'Select Customer *',
+                border: OutlineInputBorder(),
+              ),
+              items: _customers
+                  .map((c) => DropdownMenuItem(
+                      value: c.id, child: Text(c.name)))
+                  .toList(),
+              onChanged: _onCustomerChanged,
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: FutureBuilder<List<db.Item>>(
-                future: _loadItems(),
-                builder: (context, snap) {
-                  final items = snap.data ?? [];
 
-                  return Column(
-                    children: [
+            if (_selectedCustomer != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _willExceedLimit
+                      ? Colors.red.shade50
+                      : Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: _willExceedLimit
+                          ? Colors.red.shade300
+                          : Colors.green.shade300),
+                ),
+                child: Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        'Due: Rs.${_customerOutstanding.toStringAsFixed(0)}'),
+                    Text(
+                        'Limit: Rs.${_selectedCustomer!.creditLimit.toStringAsFixed(0)}'),
+                    if (_willExceedLimit)
+                      const Text('WILL EXCEED!',
+                          style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 16),
+            const Text('Items',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15)),
+            const SizedBox(height: 8),
+
+            // Invoice lines
+            ..._lines.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final line = entry.value;
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(children: [
+                    Row(children: [
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: lines.length,
-                          itemBuilder: (context, idx) {
-                            final line = lines[idx];
-                            return Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  children: [
-                                    DropdownButtonFormField<String>(
-                                      value: line.itemId,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Item',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                      items: items
-                                          .map<DropdownMenuItem<String>>((it) {
-                                        return DropdownMenuItem<String>(
-                                          value: it.id,
-                                          child: Text(it.name ?? 'Unnamed'),
-                                        );
-                                      }).toList(),
-                                      onChanged: (v) =>
-                                          setState(() => line.itemId = v),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextFormField(
-                                      initialValue: line.qty.toString(),
-                                      decoration: const InputDecoration(
-                                        labelText: 'Quantity',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      onChanged: (v) => setState(() =>
-                                          line.qty = double.tryParse(v) ?? 1),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextFormField(
-                                      initialValue: line.rate.toString(),
-                                      decoration: const InputDecoration(
-                                        labelText: 'Rate',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      onChanged: (v) => setState(() =>
-                                          line.rate = double.tryParse(v) ?? 0),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
+                        child:
+                            DropdownButtonFormField<String>(
+                          value: line.itemId,
+                          decoration: const InputDecoration(
+                              labelText: 'Item',
+                              border: OutlineInputBorder(),
+                              contentPadding:
+                                  EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8)),
+                          items: _items
+                              .map((it) => DropdownMenuItem(
+                                  value: it.id,
+                                  child: Text(it.name,
+                                      overflow: TextOverflow
+                                          .ellipsis)))
+                              .toList(),
+                          onChanged: (v) {
+                            final it = _items.firstWhere(
+                                (i) => i.id == v);
+                            setState(() {
+                              line.itemId = v;
+                              line.itemName = it.name;
+                              line.unit = it.unit;
+                              line.gstPercent =
+                                  it.gstPercent;
+                              if (it.defaultRate != null) {
+                                line.rate = it.defaultRate!;
+                              }
+                            });
                           },
                         ),
                       ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () =>
-                                  setState(() => lines.add(_Line())),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add Line'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                final genLines = lines
-                                    .where((l) => l.itemId != null)
-                                    .map((l) {
-                                      final selectedItem = items
-                                              .where((it) => it.id == l.itemId)
-                                              .isNotEmpty
-                                          ? items.firstWhere(
-                                              (it) => it.id == l.itemId)
-                                          : null;
-
-                                      return gen.InvoiceLineData(
-                                        itemName:
-                                            selectedItem?.name ?? 'Item',
-                                        qty: l.qty,
-                                        unit: selectedItem?.unit ?? '',
-                                        rate: l.rate,
-                                      );
-                                    })
-                                    .toList();
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        'Lines prepared: ${genLines.length}'),
-                                  ),
-                                );
-                              },
-                              child: const Text('Generate / Save'),
-                            ),
-                          ),
-                        ],
+                      if (_lines.length > 1)
+                        IconButton(
+                          icon: const Icon(Icons.close,
+                              color: Colors.red),
+                          onPressed: () => setState(
+                              () => _lines.removeAt(idx)),
+                        ),
+                    ]),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: line.qty
+                              .toStringAsFixed(0),
+                          decoration: InputDecoration(
+                              labelText:
+                                  'Qty (${line.unit.isEmpty ? "unit" : line.unit})',
+                              border:
+                                  const OutlineInputBorder(),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8)),
+                          keyboardType:
+                              TextInputType.number,
+                          onChanged: (v) => setState(() =>
+                              line.qty =
+                                  double.tryParse(v) ?? 1),
+                        ),
                       ),
-                    ],
-                  );
-                },
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: line.rate
+                              .toStringAsFixed(0),
+                          decoration: const InputDecoration(
+                              labelText: 'Rate (Rs.)',
+                              border: OutlineInputBorder(),
+                              contentPadding:
+                                  EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8)),
+                          keyboardType:
+                              TextInputType.number,
+                          onChanged: (v) => setState(() =>
+                              line.rate =
+                                  double.tryParse(v) ?? 0),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'Total: Rs.${line.lineTotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green),
+                      ),
+                    ),
+                  ]),
+                ),
+              );
+            }),
+
+            OutlinedButton.icon(
+              onPressed: () =>
+                  setState(() => _lines.add(_InvoiceLine())),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Item Line'),
+            ),
+
+            const SizedBox(height: 16),
+            const Divider(),
+
+            // Discount slider
+            Row(children: [
+              const Text('Discount: '),
+              Expanded(
+                child: Slider(
+                  value: _discountPercent,
+                  min: 0,
+                  max: 30,
+                  divisions: 30,
+                  label:
+                      '${_discountPercent.toStringAsFixed(0)}%',
+                  onChanged: (v) =>
+                      setState(() => _discountPercent = v),
+                ),
+              ),
+              Text(
+                  '${_discountPercent.toStringAsFixed(0)}%'),
+            ]),
+
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _paymentType,
+              decoration: const InputDecoration(
+                  labelText: 'Payment Type',
+                  border: OutlineInputBorder()),
+              items: ['CASH', 'UPI', 'BANK', 'CREDIT', 'MIXED']
+                  .map((t) => DropdownMenuItem(
+                      value: t, child: Text(t)))
+                  .toList(),
+              onChanged: (v) =>
+                  setState(() => _paymentType = v!),
+            ),
+
+            if (_paymentType != 'CREDIT') ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                decoration: const InputDecoration(
+                    labelText: 'Paid Amount (Rs.)',
+                    border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+                onChanged: (v) => setState(
+                    () => _paidAmount =
+                        double.tryParse(v) ?? 0),
+              ),
+            ],
+
+            const SizedBox(height: 16),
+            const Divider(),
+
+            // Summary
+            Card(
+              color: Colors.grey.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(children: [
+                  _summaryRow('Subtotal', _subtotal),
+                  if (_discountAmount > 0)
+                    _summaryRow(
+                        'Discount (${_discountPercent.toStringAsFixed(0)}%)',
+                        -_discountAmount,
+                        color: Colors.orange),
+                  if (_gstAmount > 0)
+                    _summaryRow('GST', _gstAmount),
+                  const Divider(),
+                  _summaryRow('TOTAL', _total,
+                      bold: true, fontSize: 18),
+                  if (_paymentType != 'CREDIT' &&
+                      _paidAmount > 0)
+                    _summaryRow('Paid', -_paidAmount,
+                        color: Colors.green),
+                  _summaryRow(
+                      'Balance Due', _balanceAmount,
+                      bold: true,
+                      color: _balanceAmount > 0
+                          ? Colors.red
+                          : Colors.green),
+                ]),
               ),
             ),
+
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _saveInvoice,
+                icon: const Icon(Icons.save),
+                label: const Text(
+                    'Generate & Save Invoice',
+                    style: TextStyle(fontSize: 16)),
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
-}
 
-class _Line {
-  String? itemId;
-  double qty = 1;
-  double rate = 0;
+  Widget _summaryRow(String label, double amount,
+          {bool bold = false,
+          Color? color,
+          double fontSize = 14}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label,
+                style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: bold
+                        ? FontWeight.bold
+                        : FontWeight.normal)),
+            Text(
+              'Rs.${amount.abs().toStringAsFixed(2)}',
+              style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: bold
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: color),
+            ),
+          ],
+        ),
+      );
 }
