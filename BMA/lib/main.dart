@@ -8,13 +8,10 @@ import 'screens/new_invoice_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final db = AppDatabase();
   runApp(
-    MultiProvider(
-      providers: [
-        Provider<AppDatabase>(
-          create: (_) => AppDatabase(),
-        ),
-      ],
+    Provider<AppDatabase>.value(
+      value: db,
       child: const MyApp(),
     ),
   );
@@ -27,32 +24,36 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'BMA - Business Management',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-  useMaterial3: true,
-  colorSchemeSeed: Colors.green,
-
-  // ✅ Elevated Buttons
-  elevatedButtonTheme: ElevatedButtonThemeData(
-    style: ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFF4C1D95), // deep purple
-      foregroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    ),
-  ),
-
-  // ✅ Outlined Buttons (transparent fix)
-  outlinedButtonTheme: OutlinedButtonThemeData(
-    style: OutlinedButton.styleFrom(
-      backgroundColor: Colors.white, // ✅ important
-      foregroundColor: const Color(0xFF4C1D95),
-      side: const BorderSide(color: Color(0xFF4C1D95), width: 1.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    ),
-  ),
-),
-
+        useMaterial3: true,
+        colorSchemeSeed: Colors.green,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2E7D32),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF2E7D32),
+            side: const BorderSide(color: Color(0xFF2E7D32), width: 1.2),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ),
+      home: const MainNavigation(),
+    );
+  }
+}
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
@@ -64,25 +65,32 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
+  static const List<Widget> _screens = [
+    DashboardScreen(),
+    CustomersScreen(),
+    ItemsScreen(),
+    NewInvoiceScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final screens = [
-      const DashboardScreen(),
-      const CustomersScreen(),
-      const ItemsScreen(),
-      const NewInvoiceScreen(),
-    ];
-
     return Scaffold(
-      body: screens[_selectedIndex],
+      body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
+        selectedItemColor: const Color(0xFF2E7D32),
+        unselectedItemColor: Colors.grey,
         onTap: (index) => setState(() => _selectedIndex = index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Customers'),
-          BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'Items'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt), label: 'Invoice'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard), label: 'Dashboard'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.people), label: 'Customers'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.inventory_2), label: 'Items'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long), label: 'Invoice'),
         ],
       ),
     );
