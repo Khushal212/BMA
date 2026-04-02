@@ -31,12 +31,9 @@ class _CustomerDetailScreenState
   Future<void> _loadAll() async {
     final db = context.read<AppDatabase>();
     final customer = await db.getCustomer(widget.customerId);
-    final invoices =
-        await db.getCustomerInvoices(widget.customerId);
-    final payments =
-        await db.getCustomerPayments(widget.customerId);
-    final outstanding =
-        await db.getCustomerOutstanding(widget.customerId);
+    final invoices = await db.getCustomerInvoices(widget.customerId);
+    final payments = await db.getCustomerPayments(widget.customerId);
+    final outstanding = await db.getCustomerOutstanding(widget.customerId);
     if (mounted) {
       setState(() {
         _customer = customer;
@@ -48,60 +45,71 @@ class _CustomerDetailScreenState
     }
   }
 
-  Future<void> _recordPayment() async {
-    final amtCtrl = TextEditingController();
+  Future<void> _recordPayment({String? invoiceId, double? maxAmount}) async {
+    final amtCtrl = TextEditingController(
+        text: maxAmount?.toStringAsFixed(0) ?? '');
     final refCtrl = TextEditingController();
     String mode = 'CASH';
     final formKey = GlobalKey<FormState>();
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) =>
-          StatefulBuilder(builder: (ctx, setDlg) {
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setDlg) {
         return AlertDialog(
-          title: const Text('Record Payment'),
+          title: Text(invoiceId != null
+              ? 'Partial Payment for Invoice'
+              : 'Record Payment'),
           content: Form(
             key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: amtCtrl,
-                  decoration: const InputDecoration(
-                      labelText: 'Amount (Rs.) *',
-                      border: OutlineInputBorder()),
-                  keyboardType: TextInputType.number,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty)
-                      return 'Required';
-                    if (double.tryParse(v) == null ||
-                        double.parse(v) <= 0)
-                      return 'Invalid amount';
-                    return null;
-                  },
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              if (invoiceId != null)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Max payable: Rs.${maxAmount?.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.blue),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: mode,
-                  decoration: const InputDecoration(
-                      labelText: 'Mode',
-                      border: OutlineInputBorder()),
-                  items: ['CASH', 'UPI', 'BANK']
-                      .map((m) => DropdownMenuItem(
-                          value: m, child: Text(m)))
-                      .toList(),
-                  onChanged: (v) =>
-                      setDlg(() => mode = v!),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: refCtrl,
-                  decoration: const InputDecoration(
-                      labelText: 'Reference (optional)',
-                      border: OutlineInputBorder()),
-                ),
-              ],
-            ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: amtCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Amount (Rs.) *',
+                    border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Required';
+                  final amt = double.tryParse(v);
+                  if (amt == null || amt <= 0) return 'Invalid amount';
+                  if (maxAmount != null && amt > maxAmount) {
+                    return 'Cannot exceed Rs.${maxAmount.toStringAsFixed(0)}';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: mode,
+                decoration: const InputDecoration(
+                    labelText: 'Mode', border: OutlineInputBorder()),
+                items: ['CASH', 'UPI', 'BANK']
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                    .toList(),
+                onChanged: (v) => setDlg(() => mode = v!),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: refCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Reference (optional)',
+                    border: OutlineInputBorder()),
+              ),
+            ]),
           ),
           actions: [
             TextButton(
@@ -120,20 +128,32 @@ class _CustomerDetailScreenState
     );
 
     if (result != true) return;
+    final db = context.read<AppDatabase>();
+    final amount = double.parse(amtCtrl.text.trim());
 
-    await context.read<AppDatabase>().recordPayment(
-          id: const Uuid().v4(),
-          customerId: widget.customerId,
-          amount: double.parse(amtCtrl.text.trim()),
-          mode: mode,
-          reference: refCtrl.text.trim().isEmpty
-              ? null
-              : refCtrl.text.trim(),
-        );
+    if (invoiceId != null) {
+      await db.recordPartialPayment(
+        id: const Uuid().v4(),
+        customerId: widget.customerId,
+        invoiceId: invoiceId,
+        amount: amount,
+        mode: mode,
+        reference: refCtrl.text.trim().isEmpty ? null : refCtrl.text.trim(),
+      );
+    } else {
+      await db.recordPayment(
+        id: const Uuid().v4(),
+        customerId: widget.customerId,
+        amount: amount,
+        mode: mode,
+        reference: refCtrl.text.trim().isEmpty ? null : refCtrl.text.trim(),
+      );
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment recorded')));
+          const SnackBar(content: Text('Payment recorded ✓'),
+              backgroundColor: Colors.green));
     }
     _loadAll();
   }
@@ -340,7 +360,7 @@ class _CustomerDetailScreenState
                 ),
               )
             else
-              ...(_payments.cast<Payment>()).map((pay) => Card(
+              ..._payments.map((pay) => Card(
                     margin:
                         const EdgeInsets.only(bottom: 8),
                     child: ListTile(
