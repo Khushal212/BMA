@@ -340,7 +340,7 @@ class _CustomerDetailScreenState
                 ),
               )
             else
-              ..._payments.map((pay) => Card(
+              ...(_payments.cast<Payment>()).map((pay) => Card(
                     margin:
                         const EdgeInsets.only(bottom: 8),
                     child: ListTile(
