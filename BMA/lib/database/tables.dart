@@ -1,7 +1,5 @@
 import 'package:drift/drift.dart';
 
-// ── Table definitions ONLY. No AppDatabase class here. ──────────
-
 class Customers extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
@@ -25,6 +23,11 @@ class Items extends Table {
   RealColumn get defaultRate => real().nullable()();
   RealColumn get gstPercent =>
       real().withDefault(const Constant(0))();
+  // Stock tracking columns
+  RealColumn get currentStock =>
+      real().withDefault(const Constant(0))();
+  RealColumn get lowStockAlert =>
+      real().withDefault(const Constant(10))();
   IntColumn get createdAt => integer()();
 
   @override
@@ -94,4 +97,18 @@ class Settings extends Table {
 
   @override
   Set<Column> get primaryKey => {key};
+}
+
+// Stock movements log
+class StockMovements extends Table {
+  TextColumn get id => text()();
+  TextColumn get itemId => text()();
+  RealColumn get quantity => real()(); // positive=in, negative=out
+  TextColumn get type => text()(); // PURCHASE, INVOICE, ADJUSTMENT
+  TextColumn get referenceId => text().nullable()(); // invoiceId etc
+  TextColumn get notes => text().nullable()();
+  IntColumn get createdAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
