@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:printing/printing.dart';
 import '../database/app_database.dart';
+import '../utils/invoice_pdf.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({Key? key}) : super(key: key);
@@ -341,13 +343,15 @@ class _InvoiceDetailSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
+            // PDF Print/Share button
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.copy),
-                label: const Text('Copy Invoice Text'),
+                icon: const Icon(Icons.picture_as_pdf,
+                    color: Colors.red),
+                label: const Text('View / Print PDF'),
                 onPressed: () =>
-                    _copyInvoiceText(context, lines),
+                    _viewPdf(context, lines),
               ),
             ),
           ],
@@ -394,6 +398,28 @@ class _InvoiceDetailSheet extends StatelessWidget {
     sb.writeln('━━━━━━━━━━━━━━━━━━━━');
     sb.writeln('_Sent via ArthaFlow_');
     return sb.toString();
+  }
+
+  Future<void> _viewPdf(BuildContext context,
+      List<InvoiceLine> lines) async {
+    final db = context.read<AppDatabase>();
+    // Load shop info
+    final shopInfo = <String, String>{};
+    for (final key in [
+      'shop_name', 'shop_address', 'shop_phone',
+      'shop_gstin', 'shop_upi'
+    ]) {
+      shopInfo[key] = await db.getSetting(key) ?? '';
+    }
+    if (!context.mounted) return;
+    await Printing.layoutPdf(
+      name: inv.invoiceNo,
+      onLayout: (_) => InvoicePdfGenerator.generate(
+        inv: inv,
+        lines: lines,
+        shopInfo: shopInfo,
+      ),
+    );
   }
 
   Future<void> _shareOnWhatsApp(
