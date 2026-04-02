@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../database/app_database.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({Key? key}) : super(key: key);
 
   @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
+  State<HistoryScreen> createState() =>
+      _HistoryScreenState();
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
@@ -15,7 +17,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<InvoiceWithCustomer> _filtered = [];
   bool _loading = true;
   final _searchCtrl = TextEditingController();
-  String _filter = 'All'; // All, Paid, Pending
+  String _filter = 'All';
 
   @override
   void initState() {
@@ -57,7 +59,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd MMM yyyy');
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Invoice History'),
@@ -69,22 +70,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ],
       ),
       body: Column(children: [
-        // Search + filter bar
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
           child: TextField(
             controller: _searchCtrl,
-            decoration: const InputDecoration(
-              hintText: 'Search customer or invoice no...',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
-              contentPadding:
-                  EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            decoration: InputDecoration(
+              hintText: 'Search customer or invoice...',
+              prefixIcon: const Icon(Icons.search),
+              border: const OutlineInputBorder(),
+              suffixIcon: _searchCtrl.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(_applyFilter);
+                      })
+                  : null,
             ),
             onChanged: (_) => setState(_applyFilter),
           ),
         ),
-        // Filter chips
         Padding(
           padding: const EdgeInsets.symmetric(
               horizontal: 12, vertical: 4),
@@ -95,8 +100,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 child: FilterChip(
                   label: Text(f),
                   selected: _filter == f,
-                  onSelected: (_) =>
-                      setState(() { _filter = f; _applyFilter(); }),
+                  onSelected: (_) => setState(() {
+                    _filter = f;
+                    _applyFilter();
+                  }),
                   selectedColor: Colors.green.shade100,
                 ),
               ),
@@ -106,14 +113,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     fontSize: 12, color: Colors.grey)),
           ]),
         ),
-
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                  child: CircularProgressIndicator())
               : _filtered.isEmpty
                   ? const Center(
                       child: Text('No invoices found',
-                          style: TextStyle(color: Colors.grey)))
+                          style: TextStyle(
+                              color: Colors.grey)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView.separated(
@@ -122,7 +130,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             const Divider(height: 1),
                         itemBuilder: (ctx, i) {
                           final inv = _filtered[i];
-                          final isPaid = inv.balanceAmount == 0;
+                          final isPaid =
+                              inv.balanceAmount == 0;
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: isPaid
@@ -140,7 +149,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                             title: Text(inv.customerName,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w600)),
+                                    fontWeight:
+                                        FontWeight.w600)),
                             subtitle: Text(
                                 '${inv.invoiceNo}  •  ${fmt.format(DateTime.fromMillisecondsSinceEpoch(inv.invoiceDate))}'),
                             trailing: Column(
@@ -167,8 +177,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 ),
                               ],
                             ),
-                            onTap: () => _showInvoiceDetail(
-                                context, inv, fmt),
+                            onTap: () =>
+                                _showInvoiceDetail(
+                                    context, inv, fmt),
                           );
                         },
                       ),
@@ -184,11 +195,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(20))),
+          borderRadius: BorderRadius.vertical(
+              top: Radius.circular(20))),
       builder: (_) => DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.7,
+        initialChildSize: 0.75,
         maxChildSize: 0.95,
         builder: (_, ctrl) => _InvoiceDetailSheet(
             inv: inv, fmt: fmt, controller: ctrl),
@@ -218,7 +229,6 @@ class _InvoiceDetailSheet extends StatelessWidget {
           controller: controller,
           padding: const EdgeInsets.all(20),
           children: [
-            // Handle
             Center(
               child: Container(
                 width: 40,
@@ -269,64 +279,75 @@ class _InvoiceDetailSheet extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 13, color: Colors.grey)),
             const Divider(height: 24),
-
-            // Lines
             const Text('Items',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14)),
             const SizedBox(height: 8),
-            ...lines.map((l) => Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                          child: Text(
-                              '${l.itemNameSnapshot} × ${l.qty} ${l.unit}',
-                              style: const TextStyle(
-                                  fontSize: 13))),
-                      Text(
-                          'Rs.${l.lineSubtotal.toStringAsFixed(0)}',
-                          style:
-                              const TextStyle(fontSize: 13)),
-                    ],
-                  ),
-                )),
+            if (snap.connectionState ==
+                ConnectionState.waiting)
+              const Center(
+                  child: CircularProgressIndicator())
+            else
+              ...lines.map((l) => Padding(
+                    padding:
+                        const EdgeInsets.symmetric(
+                            vertical: 4),
+                    child: Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                            child: Text(
+                                '${l.itemNameSnapshot} × ${l.qty} ${l.unit}',
+                                style: const TextStyle(
+                                    fontSize: 13))),
+                        Text(
+                            'Rs.${l.lineSubtotal.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                                fontSize: 13)),
+                      ],
+                    ),
+                  )),
             const Divider(height: 20),
-
-            // Totals
-            _totalRow('Subtotal', inv.subtotal),
+            _row('Subtotal', inv.subtotal),
             if (inv.discountAmount > 0)
-              _totalRow('Discount',
-                  -inv.discountAmount,
+              _row('Discount', -inv.discountAmount,
                   color: Colors.orange),
             if (inv.gstAmount > 0)
-              _totalRow('GST', inv.gstAmount),
+              _row('GST', inv.gstAmount),
             const Divider(height: 8),
-            _totalRow('TOTAL', inv.total,
+            _row('TOTAL', inv.total,
                 bold: true, fontSize: 16),
             if (inv.paidAmount > 0)
-              _totalRow('Paid', inv.paidAmount,
+              _row('Paid', inv.paidAmount,
                   color: Colors.green),
             if (inv.balanceAmount > 0)
-              _totalRow('Balance Due', inv.balanceAmount,
+              _row('Balance Due', inv.balanceAmount,
                   color: Colors.red, bold: true),
-
             const SizedBox(height: 20),
-            // Share button
+            // WhatsApp share button — properly opens WhatsApp
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.share),
+                icon: const Icon(Icons.chat),
                 label: const Text('Share via WhatsApp'),
                 style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        const Color(0xFF25D366)),
+                        const Color(0xFF25D366),
+                    foregroundColor: Colors.white),
                 onPressed: () =>
-                    _shareWhatsApp(context, inv, lines),
+                    _shareOnWhatsApp(context, lines),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.copy),
+                label: const Text('Copy Invoice Text'),
+                onPressed: () =>
+                    _copyInvoiceText(context, lines),
               ),
             ),
           ],
@@ -335,7 +356,89 @@ class _InvoiceDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _totalRow(String label, double amt,
+  String _buildInvoiceText(List<InvoiceLine> lines) {
+    final fmt2 = DateFormat('dd/MM/yyyy');
+    final date = fmt2.format(
+        DateTime.fromMillisecondsSinceEpoch(
+            inv.invoiceDate));
+    final sb = StringBuffer();
+    sb.writeln('🧾 *ARTHAFLOW INVOICE*');
+    sb.writeln('━━━━━━━━━━━━━━━━━━━━');
+    sb.writeln('📋 Invoice: *${inv.invoiceNo}*');
+    sb.writeln('📅 Date: $date');
+    sb.writeln('👤 Customer: *${inv.customerName}*');
+    sb.writeln('━━━━━━━━━━━━━━━━━━━━');
+    sb.writeln('*ITEMS:*');
+    for (final l in lines) {
+      sb.writeln(
+          '• ${l.itemNameSnapshot} × ${l.qty} ${l.unit}'
+          ' = Rs.${l.lineSubtotal.toStringAsFixed(0)}');
+    }
+    sb.writeln('━━━━━━━━━━━━━━━━━━━━');
+    if (inv.discountAmount > 0) {
+      sb.writeln(
+          'Discount: -Rs.${inv.discountAmount.toStringAsFixed(0)}');
+    }
+    if (inv.gstAmount > 0) {
+      sb.writeln(
+          'GST: Rs.${inv.gstAmount.toStringAsFixed(0)}');
+    }
+    sb.writeln(
+        '💰 *Total: Rs.${inv.total.toStringAsFixed(0)}*');
+    if (inv.balanceAmount > 0) {
+      sb.writeln(
+          '⚠️ *Balance Due: Rs.${inv.balanceAmount.toStringAsFixed(0)}*');
+    } else {
+      sb.writeln('✅ *Status: FULLY PAID*');
+    }
+    sb.writeln('━━━━━━━━━━━━━━━━━━━━');
+    sb.writeln('_Sent via ArthaFlow_');
+    return sb.toString();
+  }
+
+  Future<void> _shareOnWhatsApp(
+      BuildContext context, List<InvoiceLine> lines) async {
+    final text = _buildInvoiceText(lines);
+    final encoded = Uri.encodeComponent(text);
+    final url = Uri.parse('whatsapp://send?text=$encoded');
+    final fallbackUrl =
+        Uri.parse('https://wa.me/?text=$encoded');
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+      } else {
+        await launchUrl(fallbackUrl,
+            mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Could not open WhatsApp. Please install WhatsApp and try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _copyInvoiceText(
+      BuildContext context, List<InvoiceLine> lines) async {
+    final text = _buildInvoiceText(lines);
+    await Clipboard.setData(ClipboardData(text: text));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invoice text copied! Paste in any app.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Widget _row(String label, double amt,
       {bool bold = false,
       Color? color,
       double fontSize = 13}) =>
@@ -360,53 +463,4 @@ class _InvoiceDetailSheet extends StatelessWidget {
                       color: color)),
             ]),
       );
-
-  void _shareWhatsApp(BuildContext context,
-      InvoiceWithCustomer inv, List<InvoiceLine> lines) {
-    final fmt2 = DateFormat('dd/MM/yyyy');
-    final date = fmt2.format(
-        DateTime.fromMillisecondsSinceEpoch(inv.invoiceDate));
-
-    final sb = StringBuffer();
-    sb.writeln('*Invoice: ${inv.invoiceNo}*');
-    sb.writeln('Date: $date');
-    sb.writeln('Customer: ${inv.customerName}');
-    sb.writeln('----------------------------');
-    for (final l in lines) {
-      sb.writeln(
-          '${l.itemNameSnapshot} x ${l.qty} ${l.unit} = Rs.${l.lineSubtotal.toStringAsFixed(0)}');
-    }
-    sb.writeln('----------------------------');
-    if (inv.discountAmount > 0) {
-      sb.writeln(
-          'Discount: -Rs.${inv.discountAmount.toStringAsFixed(0)}');
-    }
-    if (inv.gstAmount > 0) {
-      sb.writeln(
-          'GST: Rs.${inv.gstAmount.toStringAsFixed(0)}');
-    }
-    sb.writeln(
-        '*Total: Rs.${inv.total.toStringAsFixed(0)}*');
-    if (inv.balanceAmount > 0) {
-      sb.writeln(
-          '*Balance Due: Rs.${inv.balanceAmount.toStringAsFixed(0)}*');
-    } else {
-      sb.writeln('*Status: PAID*');
-    }
-
-    final msg = Uri.encodeComponent(sb.toString());
-    final url = 'https://wa.me/?text=$msg';
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-            'Copy the invoice text and open WhatsApp'),
-        action: SnackBarAction(
-            label: 'Copy Text',
-            onPressed: () {
-              // Text is shown in snackbar for manual copy
-            }),
-      ),
-    );
-  }
 }
