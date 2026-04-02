@@ -11,7 +11,7 @@ import 'screens/history_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/stock_screen.dart';
 import 'screens/backup_screen.dart';
-import 'screens/settings_screen.dart';
+import 'screens/shop_profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -200,6 +200,20 @@ class _MainNavigationState extends State<MainNavigation> {
               onChanged: (_) => context.read<ThemeProvider>().toggleTheme(),
             ),
             const Divider(),
+
+            // Shop Profile
+            ListTile(
+              leading: Icon(Icons.store,
+                  color: Colors.green.shade700),
+              title: const Text('Shop Profile'),
+              subtitle: const Text('Name, address, GSTIN, UPI'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const ShopProfileScreen()));
+              },
+            ),
 
             // Reports
             ListTile(
