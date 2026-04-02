@@ -8,6 +8,9 @@ import 'screens/customers_screen.dart';
 import 'screens/items_screen.dart';
 import 'screens/new_invoice_screen.dart';
 import 'screens/history_screen.dart';
+import 'screens/reports_screen.dart';
+import 'screens/stock_screen.dart';
+import 'screens/backup_screen.dart';
 import 'screens/settings_screen.dart';
 
 void main() async {
@@ -30,7 +33,6 @@ void main() async {
   );
 }
 
-// ── Locale Provider ────────────────────────────────────────────
 class LocaleProvider extends ChangeNotifier {
   Locale _locale;
   LocaleProvider(String code) : _locale = Locale(code);
@@ -43,7 +45,6 @@ class LocaleProvider extends ChangeNotifier {
   }
 }
 
-// ── Theme Provider ─────────────────────────────────────────────
 class ThemeProvider extends ChangeNotifier {
   bool _isDark;
   ThemeProvider(this._isDark);
@@ -61,21 +62,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localeProvider = context.watch<LocaleProvider>();
-    final themeProvider = context.watch<ThemeProvider>();
+    final lp = context.watch<LocaleProvider>();
+    final tp = context.watch<ThemeProvider>();
     return MaterialApp(
       title: 'VyapaarX',
       debugShowCheckedModeBanner: false,
-      locale: localeProvider.locale,
+      locale: lp.locale,
       supportedLocales: AppLanguages.supported,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      themeMode: themeProvider.isDark
-          ? ThemeMode.dark
-          : ThemeMode.light,
+      themeMode: tp.isDark ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.green,
@@ -90,33 +89,11 @@ class MyApp extends StatelessWidget {
                 horizontal: 16, vertical: 14),
           ),
         ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF2E7D32),
-            side: const BorderSide(
-                color: Color(0xFF2E7D32), width: 1.2),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
-          ),
-        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.green,
         brightness: Brightness.dark,
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green.shade700,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
-          ),
-        ),
       ),
       home: const MainNavigation(),
     );
@@ -133,20 +110,16 @@ class MainNavigation extends StatefulWidget {
   }
 
   @override
-  State<MainNavigation> createState() =>
-      _MainNavigationState();
+  State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
-
-  void jumpTo(int index) =>
-      setState(() => _selectedIndex = index);
+  void jumpTo(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final isDark = themeProvider.isDark;
+    final tp = context.watch<ThemeProvider>();
 
     final screens = [
       const DashboardScreen(),
@@ -165,24 +138,18 @@ class _MainNavigationState extends State<MainNavigation> {
         unselectedItemColor: Colors.grey,
         selectedFontSize: 11,
         unselectedFontSize: 10,
-        onTap: (index) =>
-            setState(() => _selectedIndex = index),
+        onTap: (i) => setState(() => _selectedIndex = i),
         items: const [
           BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard),
-              label: 'Dashboard'),
+              icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.people),
-              label: 'Customers'),
+              icon: Icon(Icons.people), label: 'Customers'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2),
-              label: 'Items'),
+              icon: Icon(Icons.inventory_2), label: 'Items'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long),
-              label: 'Invoice'),
+              icon: Icon(Icons.receipt_long), label: 'Invoice'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.history),
-              label: 'History'),
+              icon: Icon(Icons.history), label: 'History'),
         ],
       ),
       drawer: Drawer(
@@ -191,23 +158,19 @@ class _MainNavigationState extends State<MainNavigation> {
           children: [
             DrawerHeader(
               decoration: BoxDecoration(
-                color: isDark
+                color: tp.isDark
                     ? Colors.green.shade900
                     : Colors.green.shade700,
               ),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                mainAxisAlignment:
-                    MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 52, height: 52,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius:
-                          BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.store,
                         color: Colors.white, size: 30),
@@ -218,59 +181,85 @@ class _MainNavigationState extends State<MainNavigation> {
                           color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.bold)),
-                  const Text(
-                      'Business Management App',
+                  const Text('Smart Business Management',
                       style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12)),
+                          color: Colors.white70, fontSize: 12)),
                 ],
               ),
             ),
 
-            // Dark mode toggle
+            // Dark mode
             SwitchListTile(
               secondary: Icon(
-                isDark
-                    ? Icons.dark_mode
-                    : Icons.light_mode,
+                tp.isDark ? Icons.dark_mode : Icons.light_mode,
                 color: Colors.green.shade600,
               ),
               title: const Text('Dark Mode'),
-              subtitle: Text(
-                  isDark ? 'Currently dark' : 'Currently light'),
-              value: isDark,
+              value: tp.isDark,
               activeColor: Colors.green.shade600,
-              onChanged: (_) =>
-                  context.read<ThemeProvider>().toggleTheme(),
+              onChanged: (_) => context.read<ThemeProvider>().toggleTheme(),
+            ),
+            const Divider(),
+
+            // Reports
+            ListTile(
+              leading: Icon(Icons.bar_chart,
+                  color: Colors.purple.shade600),
+              title: const Text('Reports'),
+              subtitle: const Text('Monthly, weekly, customer'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const ReportsScreen()));
+              },
             ),
 
-            const Divider(),
+            // Stock
+            ListTile(
+              leading: Icon(Icons.inventory,
+                  color: Colors.orange.shade600),
+              title: const Text('Stock Management'),
+              subtitle: const Text('Track inventory levels'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const StockScreen()));
+              },
+            ),
+
+            // Backup
+            ListTile(
+              leading: Icon(Icons.backup,
+                  color: Colors.blue.shade600),
+              title: const Text('Backup & Restore'),
+              subtitle: const Text('Save & restore your data'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const BackupScreen()));
+              },
+            ),
 
             // Language
             ListTile(
               leading: Icon(Icons.language,
                   color: Colors.green.shade600),
               title: const Text('Language / भाषा'),
-              subtitle: Text(AppLanguages.names[context
-                      .read<LocaleProvider>()
-                      .locale
-                      .languageCode] ??
+              subtitle: Text(AppLanguages.names[
+                      context.read<LocaleProvider>().locale.languageCode] ??
                   'English'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) =>
-                          const SettingsScreen()),
-                );
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const SettingsScreen()));
               },
             ),
 
             const Divider(),
-
-            // App version
             const ListTile(
               leading: Icon(Icons.info_outline),
               title: Text('VyapaarX'),
@@ -283,37 +272,20 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 }
 
-// ── Supported Languages ────────────────────────────────────────
 class AppLanguages {
   static const List<Locale> supported = [
-    Locale('en'),
-    Locale('hi'),
-    Locale('mr'),
-    Locale('gu'),
-    Locale('ta'),
-    Locale('te'),
-    Locale('bn'),
-    Locale('kn'),
-    Locale('ml'),
-    Locale('pa'),
-    Locale('or'),
-    Locale('ur'),
+    Locale('en'), Locale('hi'), Locale('mr'), Locale('gu'),
+    Locale('ta'), Locale('te'), Locale('bn'), Locale('kn'),
+    Locale('ml'), Locale('pa'), Locale('or'), Locale('ur'),
     Locale('as'),
   ];
-
   static const Map<String, String> names = {
-    'en': 'English',
-    'hi': 'हिंदी (Hindi)',
-    'mr': 'मराठी (Marathi)',
-    'gu': 'ગુજરાતી (Gujarati)',
-    'ta': 'தமிழ் (Tamil)',
-    'te': 'తెలుగు (Telugu)',
-    'bn': 'বাংলা (Bengali)',
-    'kn': 'ಕನ್ನಡ (Kannada)',
-    'ml': 'മലയാളം (Malayalam)',
-    'pa': 'ਪੰਜਾਬੀ (Punjabi)',
-    'or': 'ଓଡ଼ିଆ (Odia)',
-    'ur': 'اردو (Urdu)',
+    'en': 'English', 'hi': 'हिंदी (Hindi)',
+    'mr': 'मराठी (Marathi)', 'gu': 'ગુજરાતી (Gujarati)',
+    'ta': 'தமிழ் (Tamil)', 'te': 'తెలుగు (Telugu)',
+    'bn': 'বাংলা (Bengali)', 'kn': 'ಕನ್ನಡ (Kannada)',
+    'ml': 'മലയാളം (Malayalam)', 'pa': 'ਪੰਜਾਬੀ (Punjabi)',
+    'or': 'ଓଡ଼ିଆ (Odia)', 'ur': 'اردو (Urdu)',
     'as': 'অসমীয়া (Assamese)',
   };
 }
