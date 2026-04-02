@@ -224,7 +224,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                 .spaceBetween,
                                         children: [
                                           Text(
-                                              '${l.itemName} × ${l.qty} ${l.unit}',
+                                              '${l.itemNameSnapshot} × ${l.qty} ${l.unit}',
                                               style: const TextStyle(
                                                   fontSize:
                                                       13)),
