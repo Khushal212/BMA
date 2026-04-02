@@ -14,6 +14,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final langCode = prefs.getString('language_code') ?? 'en';
+  final isDark = prefs.getBool('dark_mode') ?? false;
   final db = AppDatabase();
   runApp(
     MultiProvider(
@@ -21,6 +22,8 @@ void main() async {
         Provider<AppDatabase>.value(value: db),
         ChangeNotifierProvider(
             create: (_) => LocaleProvider(langCode)),
+        ChangeNotifierProvider(
+            create: (_) => ThemeProvider(isDark)),
       ],
       child: const MyApp(),
     ),
@@ -30,15 +33,25 @@ void main() async {
 // ── Locale Provider ────────────────────────────────────────────
 class LocaleProvider extends ChangeNotifier {
   Locale _locale;
-
   LocaleProvider(String code) : _locale = Locale(code);
-
   Locale get locale => _locale;
-
   Future<void> setLocale(Locale locale) async {
     _locale = locale;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language_code', locale.languageCode);
+    notifyListeners();
+  }
+}
+
+// ── Theme Provider ─────────────────────────────────────────────
+class ThemeProvider extends ChangeNotifier {
+  bool _isDark;
+  ThemeProvider(this._isDark);
+  bool get isDark => _isDark;
+  Future<void> toggleTheme() async {
+    _isDark = !_isDark;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('dark_mode', _isDark);
     notifyListeners();
   }
 }
@@ -49,6 +62,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localeProvider = context.watch<LocaleProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
     return MaterialApp(
       title: 'VyapaarX',
       debugShowCheckedModeBanner: false,
@@ -59,9 +73,13 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      themeMode: themeProvider.isDark
+          ? ThemeMode.dark
+          : ThemeMode.light,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.green,
+        brightness: Brightness.light,
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF2E7D32),
@@ -78,6 +96,21 @@ class MyApp extends StatelessWidget {
             foregroundColor: const Color(0xFF2E7D32),
             side: const BorderSide(
                 color: Color(0xFF2E7D32), width: 1.2),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 14),
+          ),
+        ),
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.green,
+        brightness: Brightness.dark,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green.shade700,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(
@@ -112,6 +145,9 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDark;
+
     final screens = [
       const DashboardScreen(),
       const CustomersScreen(),
@@ -125,7 +161,7 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
-        selectedItemColor: const Color(0xFF2E7D32),
+        selectedItemColor: Colors.green.shade600,
         unselectedItemColor: Colors.grey,
         selectedFontSize: 11,
         unselectedFontSize: 10,
@@ -136,46 +172,91 @@ class _MainNavigationState extends State<MainNavigation> {
               icon: Icon(Icons.dashboard),
               label: 'Dashboard'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.people), label: 'Customers'),
+              icon: Icon(Icons.people),
+              label: 'Customers'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2), label: 'Items'),
+              icon: Icon(Icons.inventory_2),
+              label: 'Items'),
           BottomNavigationBarItem(
               icon: Icon(Icons.receipt_long),
               label: 'Invoice'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.history), label: 'History'),
+              icon: Icon(Icons.history),
+              label: 'History'),
         ],
       ),
-      // Settings accessible via drawer
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
               decoration: BoxDecoration(
-                  color: Colors.green.shade700),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
+                color: isDark
+                    ? Colors.green.shade900
+                    : Colors.green.shade700,
+              ),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                mainAxisAlignment:
+                    MainAxisAlignment.end,
                 children: [
-                  Icon(Icons.store,
-                      color: Colors.white, size: 40),
-                  SizedBox(height: 8),
-                  Text('BMA',
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius:
+                          BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.store,
+                        color: Colors.white, size: 30),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('VyapaarX',
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold)),
-                  Text('Business Management App',
+                  const Text(
+                      'Business Management App',
                       style: TextStyle(
                           color: Colors.white70,
                           fontSize: 12)),
                 ],
               ),
             ),
+
+            // Dark mode toggle
+            SwitchListTile(
+              secondary: Icon(
+                isDark
+                    ? Icons.dark_mode
+                    : Icons.light_mode,
+                color: Colors.green.shade600,
+              ),
+              title: const Text('Dark Mode'),
+              subtitle: Text(
+                  isDark ? 'Currently dark' : 'Currently light'),
+              value: isDark,
+              activeColor: Colors.green.shade600,
+              onChanged: (_) =>
+                  context.read<ThemeProvider>().toggleTheme(),
+            ),
+
+            const Divider(),
+
+            // Language
             ListTile(
-              leading: const Icon(Icons.language),
+              leading: Icon(Icons.language,
+                  color: Colors.green.shade600),
               title: const Text('Language / भाषा'),
+              subtitle: Text(AppLanguages.names[context
+                      .read<LocaleProvider>()
+                      .locale
+                      .languageCode] ??
+                  'English'),
+              trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -185,6 +266,15 @@ class _MainNavigationState extends State<MainNavigation> {
                           const SettingsScreen()),
                 );
               },
+            ),
+
+            const Divider(),
+
+            // App version
+            const ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('VyapaarX'),
+              subtitle: Text('Version 1.0.0'),
             ),
           ],
         ),
@@ -196,19 +286,19 @@ class _MainNavigationState extends State<MainNavigation> {
 // ── Supported Languages ────────────────────────────────────────
 class AppLanguages {
   static const List<Locale> supported = [
-    Locale('en'), // English
-    Locale('hi'), // Hindi
-    Locale('mr'), // Marathi
-    Locale('gu'), // Gujarati
-    Locale('ta'), // Tamil
-    Locale('te'), // Telugu
-    Locale('bn'), // Bengali
-    Locale('kn'), // Kannada
-    Locale('ml'), // Malayalam
-    Locale('pa'), // Punjabi
-    Locale('or'), // Odia
-    Locale('ur'), // Urdu
-    Locale('as'), // Assamese
+    Locale('en'),
+    Locale('hi'),
+    Locale('mr'),
+    Locale('gu'),
+    Locale('ta'),
+    Locale('te'),
+    Locale('bn'),
+    Locale('kn'),
+    Locale('ml'),
+    Locale('pa'),
+    Locale('or'),
+    Locale('ur'),
+    Locale('as'),
   ];
 
   static const Map<String, String> names = {
