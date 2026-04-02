@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' show Value;
@@ -18,7 +19,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
   bool _loading = true;
 
   final List<String> _units = [
-    'kg', 'crate', 'bunch', 'box', 'bag', 'piece'
+    'kg', 'gram', 'crate', 'bunch', 'box', 'bag', 'piece', 'dozen', 'litre'
   ];
 
   @override
@@ -48,21 +49,43 @@ class _ItemsScreenState extends State<ItemsScreen> {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return _items;
     return _items
-        .where(
-            (i) => i.name.toLowerCase().contains(q))
+        .where((i) => i.name.toLowerCase().contains(q))
         .toList();
+  }
+
+  // ── Validators ─────────────────────────────────────────────
+  String? _validateItemName(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Item name is required';
+    if (v.trim().length < 2) return 'Name too short (min 2 chars)';
+    if (v.trim().length > 50) return 'Name too long (max 50 chars)';
+    return null;
+  }
+
+  String? _validateRate(String? v) {
+    if (v == null || v.trim().isEmpty) return null; // optional
+    final rate = double.tryParse(v.trim());
+    if (rate == null) return 'Enter a valid number';
+    if (rate < 0) return 'Rate cannot be negative';
+    if (rate > 100000) return 'Rate seems too high';
+    return null;
+  }
+
+  String? _validateGst(String? v) {
+    if (v == null || v.trim().isEmpty) return 'GST % required';
+    final gst = double.tryParse(v.trim());
+    if (gst == null) return 'Enter a valid number';
+    if (gst < 0) return 'Cannot be negative';
+    if (gst > 28) return 'GST max is 28%';
+    return null;
   }
 
   Future<void> _showAddEditDialog({Item? existing}) async {
     final nameCtrl =
         TextEditingController(text: existing?.name ?? '');
     final rateCtrl = TextEditingController(
-        text: existing?.defaultRate
-                ?.toStringAsFixed(0) ??
-            '');
+        text: existing?.defaultRate?.toStringAsFixed(2) ?? '');
     final gstCtrl = TextEditingController(
-        text:
-            (existing?.gstPercent ?? 0).toStringAsFixed(0));
+        text: (existing?.gstPercent ?? 0).toStringAsFixed(0));
     String unit = existing?.unit ?? 'kg';
     final formKey = GlobalKey<FormState>();
 
@@ -71,8 +94,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
       builder: (ctx) =>
           StatefulBuilder(builder: (ctx, setDlg) {
         return AlertDialog(
-          title: Text(
-              existing == null ? 'Add Item' : 'Edit Item'),
+          title:
+              Text(existing == null ? 'Add Item' : 'Edit Item'),
           content: Form(
             key: formKey,
             child: SingleChildScrollView(
@@ -82,19 +105,25 @@ class _ItemsScreenState extends State<ItemsScreen> {
                   TextFormField(
                     controller: nameCtrl,
                     decoration: const InputDecoration(
-                        labelText: 'Item Name *',
-                        border: OutlineInputBorder()),
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty
-                            ? 'Required'
-                            : null,
+                      labelText: 'Item Name *',
+                      hintText: 'e.g. Tomato, Potato',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.inventory_2),
+                    ),
+                    textCapitalization:
+                        TextCapitalization.words,
+                    validator: _validateItemName,
+                    autovalidateMode:
+                        AutovalidateMode.onUserInteraction,
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: unit,
                     decoration: const InputDecoration(
-                        labelText: 'Unit',
-                        border: OutlineInputBorder()),
+                      labelText: 'Unit *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.scale),
+                    ),
                     items: _units
                         .map((u) => DropdownMenuItem(
                             value: u, child: Text(u)))
@@ -106,30 +135,40 @@ class _ItemsScreenState extends State<ItemsScreen> {
                   TextFormField(
                     controller: rateCtrl,
                     decoration: const InputDecoration(
-                        labelText: 'Default Rate (Rs.)',
-                        hintText: 'Optional',
-                        border: OutlineInputBorder()),
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      if (v != null &&
-                          v.isNotEmpty &&
-                          double.tryParse(v) == null) {
-                        return 'Invalid number';
-                      }
-                      return null;
-                    },
+                      labelText: 'Default Rate (Rs.)',
+                      hintText: 'Optional',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.currency_rupee),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(
+                            decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}')),
+                    ],
+                    validator: _validateRate,
+                    autovalidateMode:
+                        AutovalidateMode.onUserInteraction,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: gstCtrl,
                     decoration: const InputDecoration(
-                        labelText: 'GST %',
-                        border: OutlineInputBorder()),
+                      labelText: 'GST %',
+                      hintText: '0, 5, 12, 18, 28',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.percent),
+                      suffixText: '%',
+                    ),
                     keyboardType: TextInputType.number,
-                    validator: (v) =>
-                        double.tryParse(v ?? '') == null
-                            ? 'Invalid'
-                            : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,1}')),
+                    ],
+                    validator: _validateGst,
+                    autovalidateMode:
+                        AutovalidateMode.onUserInteraction,
                   ),
                 ],
               ),
@@ -184,10 +223,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Item?'),
-        content: Text('Delete "${item.name}"?'),
+        content: Text(
+            'Delete "${item.name}"? This cannot be undone.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
+              onPressed: () =>
+                  Navigator.pop(ctx, false),
               child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -206,8 +247,21 @@ class _ItemsScreenState extends State<ItemsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:
-          AppBar(title: const Text('Items'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Items'),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Center(
+              child: Text('${_items.length}',
+                  style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEditDialog(),
         child: const Icon(Icons.add),
@@ -218,10 +272,19 @@ class _ItemsScreenState extends State<ItemsScreen> {
             padding: const EdgeInsets.all(12),
             child: TextField(
               controller: _searchController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Search item...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.search),
+                border: const OutlineInputBorder(),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                        },
+                      )
+                    : null,
               ),
               onChanged: (v) =>
                   setState(() => _query = v),
@@ -233,13 +296,25 @@ class _ItemsScreenState extends State<ItemsScreen> {
                     child: CircularProgressIndicator())
                 : _filtered.isEmpty
                     ? Center(
-                        child: Text(
-                          _items.isEmpty
-                              ? 'No items yet.\nTap + to add one.'
-                              : 'No results for "$_query"',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: Colors.grey),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                                Icons
+                                    .inventory_2_outlined,
+                                size: 64,
+                                color: Colors.grey.shade400),
+                            const SizedBox(height: 12),
+                            Text(
+                              _items.isEmpty
+                                  ? 'No items yet.\nTap + to add one.'
+                                  : 'No results for "$_query"',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color:
+                                      Colors.grey.shade500),
+                            ),
+                          ],
                         ),
                       )
                     : RefreshIndicator(
@@ -252,8 +327,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
                             final item = _filtered[idx];
                             return ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: Colors
-                                    .green.shade100,
+                                backgroundColor:
+                                    Colors.green.shade100,
                                 child: Text(
                                   item.name[0]
                                       .toUpperCase(),
@@ -270,18 +345,30 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                           FontWeight.w600)),
                               subtitle: Text(
                                   '${item.unit}  •  GST: ${item.gstPercent.toStringAsFixed(0)}%'),
-                              trailing: Text(
-                                item.defaultRate != null
-                                    ? 'Rs.${item.defaultRate!.toStringAsFixed(0)}'
-                                    : 'No rate',
-                                style: TextStyle(
-                                    fontWeight:
-                                        FontWeight.bold,
-                                    color: item.defaultRate !=
-                                            null
-                                        ? Colors
-                                            .green.shade700
-                                        : Colors.grey),
+                              trailing: Column(
+                                mainAxisSize:
+                                    MainAxisSize.min,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    item.defaultRate != null
+                                        ? 'Rs.${item.defaultRate!.toStringAsFixed(0)}'
+                                        : 'No rate',
+                                    style: TextStyle(
+                                        fontWeight:
+                                            FontWeight.bold,
+                                        color: item.defaultRate !=
+                                                null
+                                            ? Colors
+                                                .green.shade700
+                                            : Colors.grey),
+                                  ),
+                                  const Text('default',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey)),
+                                ],
                               ),
                               onTap: () =>
                                   showModalBottomSheet(
@@ -297,11 +384,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                         title: const Text(
                                             'Edit'),
                                         onTap: () {
-                                          Navigator.pop(
-                                              ctx);
+                                          Navigator.pop(ctx);
                                           _showAddEditDialog(
-                                              existing:
-                                                  item);
+                                              existing: item);
                                         },
                                       ),
                                       ListTile(
@@ -315,8 +400,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                                 color: Colors
                                                     .red)),
                                         onTap: () {
-                                          Navigator.pop(
-                                              ctx);
+                                          Navigator.pop(ctx);
                                           _deleteItem(item);
                                         },
                                       ),
