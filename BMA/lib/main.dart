@@ -199,6 +199,34 @@ class _MainNavigationState extends State<MainNavigation> {
               activeColor: Colors.green.shade600,
               onChanged: (_) => context.read<ThemeProvider>().toggleTheme(),
             ),
+            // Staff Management
+            ListTile(
+              leading: Icon(Icons.group,
+                  color: Colors.indigo.shade600),
+              title: const Text('Staff Management'),
+              subtitle: const Text('Add staff with PIN + permissions'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const StaffScreen()));
+              },
+            ),
+
+            // Google Drive Sync
+            ListTile(
+              leading: Icon(Icons.cloud_sync,
+                  color: Colors.blue.shade600),
+              title: const Text('Data Sync'),
+              subtitle: const Text('Backup to Google Drive'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const SyncScreen()));
+              },
+            ),
+
             const Divider(),
 
             // Shop Profile
