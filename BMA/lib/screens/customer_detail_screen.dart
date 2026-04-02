@@ -324,20 +324,37 @@ class _CustomerDetailScreenState
                         crossAxisAlignment:
                             CrossAxisAlignment.end,
                         children: [
-                          Text(
-                              'Rs.${inv.total.toStringAsFixed(0)}',
+                          Text('Rs.${inv.total.toStringAsFixed(0)}',
                               style: const TextStyle(
-                                  fontWeight:
-                                      FontWeight.bold)),
+                                  fontWeight: FontWeight.bold)),
                           Text(
                             'Bal: Rs.${inv.balanceAmount.toStringAsFixed(0)}',
                             style: TextStyle(
                                 fontSize: 11,
-                                color: inv.balanceAmount >
-                                        0
+                                color: inv.balanceAmount > 0
                                     ? Colors.red
                                     : Colors.green),
                           ),
+                          if (inv.balanceAmount > 0)
+                            GestureDetector(
+                              onTap: () => _recordPayment(
+                                  invoiceId: inv.id,
+                                  maxAmount: inv.balanceAmount),
+                              child: Container(
+                                margin: const EdgeInsets.only(top: 3),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade600,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text('Pay',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ),
                         ],
                       ),
                     ),
