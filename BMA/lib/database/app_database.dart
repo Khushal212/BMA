@@ -191,8 +191,8 @@ class AppDatabase extends _$AppDatabase {
         .get();
     final totalBalance = invRows.fold<double>(
         0.0, (s, inv) => s + inv.balanceAmount);
-    final totalPaid = payRows.fold<double>(
-        0.0, (s, pay) => s + pay.amount);
+    final totalPaid =
+        payRows.fold<double>(0.0, (s, pay) => s + pay.amount);
     return (totalBalance - totalPaid).clamp(0.0, double.infinity);
   }
 
@@ -250,46 +250,11 @@ class AppDatabase extends _$AppDatabase {
         .getSingleOrNull();
     return r?.value;
   }
-}
 
-// ── HELPER DATA CLASS ──────────────────────────────────────────
-class InvoiceLineData {
-  final String id;
-  final String itemId;
-  final String itemName;
-  final double qty;
-  final String unit;
-  final double rate;
-  final double lineSubtotal;
-  final double lineGstPercent;
-  final double lineGstAmount;
-  final double lineTotal;
-
-  InvoiceLineData({
-    required this.id,
-    required this.itemId,
-    required this.itemName,
-    required this.qty,
-    required this.unit,
-    required this.rate,
-    required this.lineSubtotal,
-    required this.lineGstPercent,
-    required this.lineGstAmount,
-    required this.lineTotal,
-  });
-}
-
-// ── DATABASE CONNECTION ────────────────────────────────────────
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'bma.db'));
-    return NativeDatabase.createInBackground(file);
-  });
   // ── DAILY SUMMARY ─────────────────────────────────────────────
   Future<DailySummary> getDailySummary(DateTime date) async {
-    final start = DateTime(date.year, date.month, date.day)
-        .millisecondsSinceEpoch;
+    final start =
+        DateTime(date.year, date.month, date.day).millisecondsSinceEpoch;
     final end =
         DateTime(date.year, date.month, date.day, 23, 59, 59)
             .millisecondsSinceEpoch;
@@ -337,7 +302,8 @@ LazyDatabase _openConnection() {
   }
 
   // ── ALL INVOICES WITH CUSTOMER NAME ───────────────────────────
-  Future<List<InvoiceWithCustomer>> getAllInvoicesWithCustomers() async {
+  Future<List<InvoiceWithCustomer>>
+      getAllInvoicesWithCustomers() async {
     final allInvoices = await (select(invoices)
           ..orderBy([(i) => OrderingTerm(
               expression: i.invoiceDate,
@@ -364,7 +330,34 @@ LazyDatabase _openConnection() {
   }
 }
 
-// ── DATA CLASSES ───────────────────────────────────────────────
+// ── HELPER MODEL ──────────────────────────────────────────────
+class InvoiceLineData {
+  final String id;
+  final String itemId;
+  final String itemName;
+  final double qty;
+  final String unit;
+  final double rate;
+  final double lineSubtotal;
+  final double lineGstPercent;
+  final double lineGstAmount;
+  final double lineTotal;
+
+  InvoiceLineData({
+    required this.id,
+    required this.itemId,
+    required this.itemName,
+    required this.qty,
+    required this.unit,
+    required this.rate,
+    required this.lineSubtotal,
+    required this.lineGstPercent,
+    required this.lineGstAmount,
+    required this.lineTotal,
+  });
+}
+
+// ── DAILY SUMMARY MODELS ──────────────────────────────────────
 class DailySummary {
   final double totalSales, collected, pending;
   final List<DailyInvoiceDetail> invoices;
@@ -415,4 +408,12 @@ class InvoiceWithCustomer {
     required this.gstAmount,
   });
 }
+
+// ── DATABASE CONNECTION ───────────────────────────────────────
+LazyDatabase _openConnection() {
+  return LazyDatabase(() async {
+    final dbFolder = await getApplicationDocumentsDirectory();
+    final file = File(p.join(dbFolder.path, 'bma.db'));
+    return NativeDatabase.createInBackground(file);
+  });
 }
