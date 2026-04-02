@@ -23,7 +23,6 @@ class Items extends Table {
   RealColumn get defaultRate => real().nullable()();
   RealColumn get gstPercent =>
       real().withDefault(const Constant(0))();
-  // Stock tracking columns
   RealColumn get currentStock =>
       real().withDefault(const Constant(0))();
   RealColumn get lowStockAlert =>
@@ -54,6 +53,7 @@ class Invoices extends Table {
   TextColumn get paymentType => text()();
   TextColumn get notes => text().nullable()();
   TextColumn get pdfPath => text().nullable()();
+  TextColumn get createdBy => text().nullable()(); // staff ID
   IntColumn get createdAt => integer()();
 
   @override
@@ -99,14 +99,36 @@ class Settings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-// Stock movements log
 class StockMovements extends Table {
   TextColumn get id => text()();
   TextColumn get itemId => text()();
-  RealColumn get quantity => real()(); // positive=in, negative=out
-  TextColumn get type => text()(); // PURCHASE, INVOICE, ADJUSTMENT
-  TextColumn get referenceId => text().nullable()(); // invoiceId etc
+  RealColumn get quantity => real()();
+  TextColumn get type => text()();
+  TextColumn get referenceId => text().nullable()();
   TextColumn get notes => text().nullable()();
+  IntColumn get createdAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// Staff / multi-user table
+class StaffUsers extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get phone => text()();
+  TextColumn get pin => text()(); // 4-digit PIN (hashed)
+  TextColumn get role => text()(); // OWNER, MANAGER, SALESPERSON
+  BoolColumn get canCreateInvoice =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get canViewReports =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get canManageCustomers =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get canManageItems =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get isActive =>
+      boolean().withDefault(const Constant(true))();
   IntColumn get createdAt => integer()();
 
   @override
