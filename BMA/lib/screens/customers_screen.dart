@@ -201,7 +201,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       await db.updateCustomer(existing.copyWith(
         name: nameCtrl.text.trim(),
         phone: phoneCtrl.text.trim(),
-        address: addrCtrl.text.trim().isEmpty
+        address: addrCtrl.text.trim().isEmpty ? null : addrCtrl.text.trim(),
             ? null
             : addrCtrl.text.trim(),
         creditLimit:
