@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,8 +17,29 @@ import 'screens/staff_screen.dart';
 import 'screens/sync_screen.dart';
 import 'screens/settings_screen.dart';
 
+// ── Brand Colors ───────────────────────────────────────────────
+class AppColors {
+  static const navy = Color(0xFF1B2A4A);
+  static const navyDark = Color(0xFF0D1B2A);
+  static const navyLight = Color(0xFF2A3F6F);
+  static const gold = Color(0xFFF0A500);
+  static const accent = Color(0xFF4A90D9);
+  static const white = Color(0xFFFFFFFF);
+  static const offWhite = Color(0xFFF5F7FA);
+  static const success = Color(0xFF2ECC71);
+  static const danger = Color(0xFFE74C3C);
+  static const warning = Color(0xFFF39C12);
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set status bar to match navy theme
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+  ));
+
   final prefs = await SharedPreferences.getInstance();
   final langCode = prefs.getString('language_code') ?? 'en';
   final isDark = prefs.getBool('dark_mode') ?? false;
@@ -26,10 +48,8 @@ void main() async {
     MultiProvider(
       providers: [
         Provider<AppDatabase>.value(value: db),
-        ChangeNotifierProvider(
-            create: (_) => LocaleProvider(langCode)),
-        ChangeNotifierProvider(
-            create: (_) => ThemeProvider(isDark)),
+        ChangeNotifierProvider(create: (_) => LocaleProvider(langCode)),
+        ChangeNotifierProvider(create: (_) => ThemeProvider(isDark)),
       ],
       child: const MyApp(),
     ),
@@ -67,6 +87,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final lp = context.watch<LocaleProvider>();
     final tp = context.watch<ThemeProvider>();
+
     return MaterialApp(
       title: 'VyapaarX',
       debugShowCheckedModeBanner: false,
@@ -78,31 +99,384 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       themeMode: tp.isDark ? ThemeMode.dark : ThemeMode.light,
-      theme: ThemeData(
+      theme: _buildLightTheme(),
+      darkTheme: _buildDarkTheme(),
+      home: const SplashScreen(),
+    );
+  }
+
+  ThemeData _buildLightTheme() => ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.green,
-        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.navy,
+          primary: AppColors.navy,
+          secondary: AppColors.gold,
+          surface: AppColors.offWhite,
+          background: AppColors.offWhite,
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: AppColors.offWhite,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.navy,
+          foregroundColor: AppColors.white,
+          centerTitle: true,
+          elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+          ),
+          titleTextStyle: TextStyle(
+            color: AppColors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+          iconTheme: IconThemeData(color: AppColors.white),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: AppColors.navy,
+          selectedItemColor: AppColors.gold,
+          unselectedItemColor: Colors.white54,
+          type: BottomNavigationBarType.fixed,
+          elevation: 8,
+          selectedLabelStyle: TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 11),
+          unselectedLabelStyle: TextStyle(fontSize: 10),
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E7D32),
-            foregroundColor: Colors.white,
+            backgroundColor: AppColors.navy,
+            foregroundColor: AppColors.white,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(
                 horizontal: 16, vertical: 14),
+            elevation: 2,
+          ),
+        ),
+        cardTheme: CardTheme(
+          elevation: 3,
+          shadowColor: AppColors.navy.withOpacity(0.15),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          color: AppColors.white,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide:
+                const BorderSide(color: AppColors.navy, width: 2),
+          ),
+          labelStyle:
+              const TextStyle(color: AppColors.navyLight),
+          floatingLabelStyle:
+              const TextStyle(color: AppColors.navy),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: AppColors.gold,
+          foregroundColor: AppColors.navy,
+          elevation: 4,
+        ),
+        drawerTheme: const DrawerThemeData(
+          backgroundColor: AppColors.white,
+        ),
+        chipTheme: ChipThemeData(
+          selectedColor: AppColors.navy.withOpacity(0.15),
+          labelStyle: const TextStyle(fontSize: 12),
+        ),
+      );
+
+  ThemeData _buildDarkTheme() => ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.navy,
+          primary: AppColors.navyLight,
+          secondary: AppColors.gold,
+          surface: const Color(0xFF1A1A2E),
+          background: const Color(0xFF0F0F1A),
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF0F0F1A),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.navyDark,
+          foregroundColor: AppColors.white,
+          elevation: 0,
+          titleTextStyle: TextStyle(
+            color: AppColors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: AppColors.navyDark,
+          selectedItemColor: AppColors.gold,
+          unselectedItemColor: Colors.white38,
+          type: BottomNavigationBarType.fixed,
+        ),
+        cardTheme: CardTheme(
+          color: const Color(0xFF1A2340),
+          elevation: 4,
+          shadowColor: Colors.black45,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.navyLight,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      );
+}
+
+// ── SPLASH SCREEN ──────────────────────────────────────────────
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({Key? key}) : super(key: key);
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _logoCtrl;
+  late AnimationController _textCtrl;
+  late AnimationController _bgCtrl;
+  late Animation<double> _logoScale;
+  late Animation<double> _logoOpacity;
+  late Animation<double> _textOpacity;
+  late Animation<Offset> _textSlide;
+  late Animation<double> _bgOpacity;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _bgCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
+    _logoCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
+    _textCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 700));
+
+    _bgOpacity = Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(parent: _bgCtrl, curve: Curves.easeIn));
+
+    _logoScale = Tween<double>(begin: 0.3, end: 1.0).animate(
+        CurvedAnimation(parent: _logoCtrl, curve: Curves.elasticOut));
+    _logoOpacity = Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(
+            parent: _logoCtrl,
+            curve: const Interval(0.0, 0.5, curve: Curves.easeIn)));
+
+    _textOpacity = Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(parent: _textCtrl, curve: Curves.easeIn));
+    _textSlide =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+            .animate(CurvedAnimation(
+                parent: _textCtrl, curve: Curves.easeOut));
+
+    // Sequence animations
+    _bgCtrl.forward().then((_) {
+      _logoCtrl.forward().then((_) {
+        _textCtrl.forward().then((_) {
+          Future.delayed(const Duration(milliseconds: 800), () {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (_, __, ___) =>
+                      const MainNavigation(),
+                  transitionsBuilder: (_, anim, __, child) =>
+                      FadeTransition(opacity: anim, child: child),
+                  transitionDuration:
+                      const Duration(milliseconds: 600),
+                ),
+              );
+            }
+          });
+        });
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _bgCtrl.dispose();
+    _logoCtrl.dispose();
+    _textCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: AnimatedBuilder(
+        animation: _bgCtrl,
+        builder: (_, __) => Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.navyDark
+                    .withOpacity(_bgOpacity.value),
+                AppColors.navy.withOpacity(_bgOpacity.value),
+                AppColors.navyLight
+                    .withOpacity(_bgOpacity.value),
+              ],
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated logo container
+                AnimatedBuilder(
+                  animation: _logoCtrl,
+                  builder: (_, __) => Transform.scale(
+                    scale: _logoScale.value,
+                    child: Opacity(
+                      opacity: _logoOpacity.value,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: Colors.white
+                              .withOpacity(0.1),
+                          borderRadius:
+                              BorderRadius.circular(30),
+                          border: Border.all(
+                              color: Colors.white
+                                  .withOpacity(0.3),
+                              width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.gold
+                                  .withOpacity(0.3),
+                              blurRadius: 30,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.store,
+                          size: 60,
+                          color: AppColors.gold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Animated text
+                AnimatedBuilder(
+                  animation: _textCtrl,
+                  builder: (_, __) => SlideTransition(
+                    position: _textSlide,
+                    child: Opacity(
+                      opacity: _textOpacity.value,
+                      child: Column(children: [
+                        const Text(
+                          'VyapaarX',
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Smart Business Management',
+                          style: TextStyle(
+                            color: Colors.white
+                                .withOpacity(0.7),
+                            fontSize: 14,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        // Loading dots
+                        _LoadingDots(),
+                      ]),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.green,
-        brightness: Brightness.dark,
-      ),
-      home: const MainNavigation(),
     );
   }
 }
 
+class _LoadingDots extends StatefulWidget {
+  @override
+  State<_LoadingDots> createState() => _LoadingDotsState();
+}
+
+class _LoadingDotsState extends State<_LoadingDots>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+  late List<Animation<double>> _anims;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(
+      3,
+      (i) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 600),
+      ),
+    );
+    _anims = _controllers
+        .map((c) => Tween<double>(begin: 0, end: 1).animate(
+            CurvedAnimation(parent: c, curve: Curves.easeInOut)))
+        .toList();
+
+    for (int i = 0; i < 3; i++) {
+      Future.delayed(Duration(milliseconds: i * 200), () {
+        if (mounted) _controllers[i].repeat(reverse: true);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(3, (i) {
+          return AnimatedBuilder(
+            animation: _anims[i],
+            builder: (_, __) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 8,
+              height: 8 + (_anims[i].value * 6),
+              decoration: BoxDecoration(
+                color: AppColors.gold
+                    .withOpacity(0.4 + _anims[i].value * 0.6),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          );
+        }),
+      );
+}
+
+// ── MAIN NAVIGATION ────────────────────────────────────────────
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
 
@@ -116,12 +490,45 @@ class MainNavigation extends StatefulWidget {
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class _MainNavigationState extends State<MainNavigation>
+    with TickerProviderStateMixin {
   int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey =
       GlobalKey<ScaffoldState>();
+  late AnimationController _pageCtrl;
+  late Animation<double> _pageFade;
 
-  void jumpTo(int index) => setState(() => _selectedIndex = index);
+  @override
+  void initState() {
+    super.initState();
+    _pageCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 300));
+    _pageFade = CurvedAnimation(
+        parent: _pageCtrl, curve: Curves.easeInOut);
+    _pageCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  void jumpTo(int index) {
+    _pageCtrl.reverse().then((_) {
+      setState(() => _selectedIndex = index);
+      _pageCtrl.forward();
+    });
+  }
+
+  void _onTabTap(int i) {
+    if (i == _selectedIndex) return;
+    _pageCtrl.reverse().then((_) {
+      setState(() => _selectedIndex = i);
+      _pageCtrl.forward();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,258 +542,250 @@ class _MainNavigationState extends State<MainNavigation> {
       const HistoryScreen(),
     ];
 
+    final tabItems = [
+      const BottomNavigationBarItem(
+          icon: Icon(Icons.dashboard_outlined),
+          activeIcon: Icon(Icons.dashboard),
+          label: 'Dashboard'),
+      const BottomNavigationBarItem(
+          icon: Icon(Icons.people_outline),
+          activeIcon: Icon(Icons.people),
+          label: 'Customers'),
+      const BottomNavigationBarItem(
+          icon: Icon(Icons.inventory_2_outlined),
+          activeIcon: Icon(Icons.inventory_2),
+          label: 'Items'),
+      const BottomNavigationBarItem(
+          icon: Icon(Icons.receipt_long_outlined),
+          activeIcon: Icon(Icons.receipt_long),
+          label: 'Invoice'),
+      const BottomNavigationBarItem(
+          icon: Icon(Icons.history_outlined),
+          activeIcon: Icon(Icons.history),
+          label: 'History'),
+    ];
+
     return Scaffold(
       key: _scaffoldKey,
-      // Increase drag width so swipe from edge opens drawer easily
-      drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.25,
-      body: screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.green.shade600,
-        unselectedItemColor: Colors.grey,
-        selectedFontSize: 11,
-        unselectedFontSize: 10,
-        onTap: (i) => setState(() => _selectedIndex = i),
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard), label: 'Dashboard'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.people), label: 'Customers'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2), label: 'Items'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long), label: 'Invoice'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.history), label: 'History'),
-        ],
+      drawerEdgeDragWidth:
+          MediaQuery.of(context).size.width * 0.25,
+      body: FadeTransition(
+        opacity: _pageFade,
+        child: screens[_selectedIndex],
       ),
-      // Floating menu button — always visible bottom right
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton.small(
-              heroTag: 'menu_fab',
-              backgroundColor: Colors.green.shade700,
-              onPressed: () =>
-                  _scaffoldKey.currentState?.openDrawer(),
-              child: const Icon(Icons.menu, color: Colors.white),
-            )
-          : null,
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: tp.isDark
-                    ? Colors.green.shade900
-                    : Colors.green.shade700,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.store,
-                        color: Colors.white, size: 30),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('VyapaarX',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold)),
-                  const Text('Smart Business Management',
-                      style: TextStyle(
-                          color: Colors.white70, fontSize: 12)),
-                ],
-              ),
-            ),
-
-            // Dark mode
-            SwitchListTile(
-              secondary: Icon(
-                tp.isDark ? Icons.dark_mode : Icons.light_mode,
-                color: Colors.green.shade600,
-              ),
-              title: const Text('Dark Mode'),
-              value: tp.isDark,
-              activeColor: Colors.green.shade600,
-              onChanged: (_) =>
-                  context.read<ThemeProvider>().toggleTheme(),
-            ),
-
-            // Staff Management
-            ListTile(
-              leading:
-                  Icon(Icons.group, color: Colors.indigo.shade600),
-              title: const Text('Staff Management'),
-              subtitle:
-                  const Text('Add staff with PIN + permissions'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const StaffScreen()));
-              },
-            ),
-
-            // Google Drive Sync
-            ListTile(
-              leading: Icon(Icons.cloud_sync,
-                  color: Colors.blue.shade600),
-              title: const Text('Data Sync'),
-              subtitle: const Text('Backup to Google Drive'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const SyncScreen()));
-              },
-            ),
-
-            const Divider(),
-
-            // Shop Profile
-            ListTile(
-              leading: Icon(Icons.store,
-                  color: Colors.green.shade700),
-              title: const Text('Shop Profile'),
-              subtitle:
-                  const Text('Name, address, GSTIN, UPI'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            const ShopProfileScreen()));
-              },
-            ),
-
-            // Reports
-            ListTile(
-              leading: Icon(Icons.bar_chart,
-                  color: Colors.purple.shade600),
-              title: const Text('Reports'),
-              subtitle:
-                  const Text('Monthly, weekly, customer'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            const ReportsScreen()));
-              },
-            ),
-
-            // Stock
-            ListTile(
-              leading: Icon(Icons.inventory,
-                  color: Colors.orange.shade600),
-              title: const Text('Stock Management'),
-              subtitle: const Text('Track inventory levels'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const StockScreen()));
-              },
-            ),
-
-            // Backup
-            ListTile(
-              leading: Icon(Icons.backup,
-                  color: Colors.blue.shade600),
-              title: const Text('Backup & Restore'),
-              subtitle: const Text('Save & restore your data'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const BackupScreen()));
-              },
-            ),
-
-            // Language
-            ListTile(
-              leading: Icon(Icons.language,
-                  color: Colors.green.shade600),
-              title: const Text('Language / भाषा'),
-              subtitle: Text(AppLanguages.names[context
-                          .read<LocaleProvider>()
-                          .locale
-                          .languageCode] ??
-                  'English'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            const SettingsScreen()));
-              },
-            ),
-
-            const Divider(),
-            const ListTile(
-              leading: Icon(Icons.info_outline),
-              title: Text('VyapaarX'),
-              subtitle: Text('Version 1.0.0'),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navyDark.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
             ),
           ],
         ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onTabTap,
+          items: tabItems,
+        ),
       ),
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton.small(
+              heroTag: 'menu_fab',
+              onPressed: () =>
+                  _scaffoldKey.currentState?.openDrawer(),
+              child: const Icon(Icons.menu),
+            )
+          : null,
+      drawer: _buildDrawer(tp),
     );
   }
+
+  Widget _buildDrawer(ThemeProvider tp) => Drawer(
+        child: Column(children: [
+          // Gradient header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 50, 16, 20),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.navyDark, AppColors.navyLight],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: AppColors.gold.withOpacity(0.5),
+                        width: 1.5),
+                  ),
+                  child: const Icon(Icons.store,
+                      color: AppColors.gold, size: 30),
+                ),
+                const SizedBox(height: 12),
+                const Text('VyapaarX',
+                    style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1)),
+                Text('Smart Business Management',
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 12)),
+              ],
+            ),
+          ),
+
+          // Menu items
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                SwitchListTile(
+                  secondary: Icon(
+                    tp.isDark
+                        ? Icons.dark_mode
+                        : Icons.light_mode,
+                    color: AppColors.navy,
+                  ),
+                  title: const Text('Dark Mode'),
+                  value: tp.isDark,
+                  activeColor: AppColors.navy,
+                  onChanged: (_) =>
+                      context.read<ThemeProvider>().toggleTheme(),
+                ),
+                const Divider(height: 1),
+                _drawerItem(
+                  icon: Icons.group,
+                  label: 'Staff Management',
+                  subtitle: 'Add staff with PIN + permissions',
+                  color: Colors.indigo,
+                  onTap: () => _navigate(const StaffScreen()),
+                ),
+                _drawerItem(
+                  icon: Icons.cloud_sync,
+                  label: 'Data Sync',
+                  subtitle: 'Backup to Google Drive',
+                  color: Colors.blue,
+                  onTap: () => _navigate(const SyncScreen()),
+                ),
+                const Divider(height: 1),
+                _drawerItem(
+                  icon: Icons.store,
+                  label: 'Shop Profile',
+                  subtitle: 'Name, address, GSTIN, UPI',
+                  color: AppColors.navy,
+                  onTap: () =>
+                      _navigate(const ShopProfileScreen()),
+                ),
+                _drawerItem(
+                  icon: Icons.bar_chart,
+                  label: 'Reports',
+                  subtitle: 'Monthly, weekly, customer',
+                  color: Colors.purple,
+                  onTap: () =>
+                      _navigate(const ReportsScreen()),
+                ),
+                _drawerItem(
+                  icon: Icons.inventory,
+                  label: 'Stock Management',
+                  subtitle: 'Track inventory levels',
+                  color: Colors.orange,
+                  onTap: () =>
+                      _navigate(const StockScreen()),
+                ),
+                _drawerItem(
+                  icon: Icons.backup,
+                  label: 'Backup & Restore',
+                  subtitle: 'Save & restore your data',
+                  color: Colors.teal,
+                  onTap: () =>
+                      _navigate(const BackupScreen()),
+                ),
+                _drawerItem(
+                  icon: Icons.language,
+                  label: 'Language / भाषा',
+                  subtitle: AppLanguages.names[context
+                              .read<LocaleProvider>()
+                              .locale
+                              .languageCode] ??
+                      'English',
+                  color: Colors.green,
+                  onTap: () =>
+                      _navigate(const SettingsScreen()),
+                ),
+                const Divider(height: 1),
+                const ListTile(
+                  leading: Icon(Icons.info_outline,
+                      color: Colors.grey),
+                  title: Text('VyapaarX',
+                      style: TextStyle(color: Colors.grey)),
+                  subtitle: Text('Version 1.0.0',
+                      style: TextStyle(fontSize: 11)),
+                ),
+              ],
+            ),
+          ),
+        ]),
+      );
+
+  Widget _drawerItem({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) =>
+      ListTile(
+        leading: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        title: Text(label,
+            style: const TextStyle(
+                fontWeight: FontWeight.w600, fontSize: 14)),
+        subtitle: Text(subtitle,
+            style: const TextStyle(fontSize: 11)),
+        trailing: const Icon(Icons.chevron_right,
+            color: Colors.grey, size: 18),
+        onTap: () {
+          Navigator.pop(context);
+          onTap();
+        },
+      );
+
+  void _navigate(Widget screen) => Navigator.push(context,
+      MaterialPageRoute(builder: (_) => screen));
 }
 
 class AppLanguages {
   static const List<Locale> supported = [
-    Locale('en'),
-    Locale('hi'),
-    Locale('mr'),
-    Locale('gu'),
-    Locale('ta'),
-    Locale('te'),
-    Locale('bn'),
-    Locale('kn'),
-    Locale('ml'),
-    Locale('pa'),
-    Locale('or'),
-    Locale('ur'),
+    Locale('en'), Locale('hi'), Locale('mr'), Locale('gu'),
+    Locale('ta'), Locale('te'), Locale('bn'), Locale('kn'),
+    Locale('ml'), Locale('pa'), Locale('or'), Locale('ur'),
     Locale('as'),
   ];
   static const Map<String, String> names = {
-    'en': 'English',
-    'hi': 'हिंदी (Hindi)',
-    'mr': 'मराठी (Marathi)',
-    'gu': 'ગુજરાતી (Gujarati)',
-    'ta': 'தமிழ் (Tamil)',
-    'te': 'తెలుగు (Telugu)',
-    'bn': 'বাংলা (Bengali)',
-    'kn': 'ಕನ್ನಡ (Kannada)',
-    'ml': 'മലയാളം (Malayalam)',
-    'pa': 'ਪੰਜਾਬੀ (Punjabi)',
-    'or': 'ଓଡ଼ିଆ (Odia)',
-    'ur': 'اردو (Urdu)',
+    'en': 'English', 'hi': 'हिंदी (Hindi)',
+    'mr': 'मराठी (Marathi)', 'gu': 'ગુજરાતી (Gujarati)',
+    'ta': 'தமிழ் (Tamil)', 'te': 'తెలుగు (Telugu)',
+    'bn': 'বাংলা (Bengali)', 'kn': 'ಕನ್ನಡ (Kannada)',
+    'ml': 'മലയാളം (Malayalam)', 'pa': 'ਪੰਜਾਬੀ (Punjabi)',
+    'or': 'ଓଡ଼ିଆ (Odia)', 'ur': 'اردو (Urdu)',
     'as': 'অসমীয়া (Assamese)',
   };
 }
