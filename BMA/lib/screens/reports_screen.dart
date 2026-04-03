@@ -454,26 +454,25 @@ class _CustomerReportTabState
                         fontSize: 15)),
                 const SizedBox(height: 8),
                 ..._report!.itemBreakdown.map((item) => Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              Colors.purple.shade100,
-                          child: Text(
-                              item['itemName'][0].toUpperCase()
-                              style: TextStyle(
-                                  color: Colors.purple.shade700,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.purple.shade100,
+                            child: Text(
+                                (item['itemName'] as String)[0].toUpperCase(),
+                                style: TextStyle(
+                                    color: Colors.purple.shade700,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text(item['itemName'] as String),
+                          subtitle: Text(
+                              '${(item['totalQty'] as double).toStringAsFixed(1)} ${item['unit']}'),
+                          trailing: Text(
+                              'Rs.${(item['totalAmount'] as double).toStringAsFixed(0)}',
+                              style: const TextStyle(
                                   fontWeight: FontWeight.bold)),
                         ),
-                        title: Text(item['itemName']),
-                        subtitle: Text(
-                            '${item['totalQty'].toStringAsFixed(1)} ${item['unit']}'),
-                        trailing: Text(
-                            'Rs.${item['totalAmount'].toStringAsFixed(0)}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    )),
+                      )),
                 const SizedBox(height: 16),
 
                 // Recent invoices
