@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../database/app_database.dart';
+import 'package:drift/drift.dart' show Value;
 
 class StockScreen extends StatefulWidget {
   const StockScreen({Key? key}) : super(key: key);
