@@ -14,6 +14,7 @@ class Customers extends Table {
   TextColumn get phone => text()();
   TextColumn get address => text().nullable()();
   RealColumn get creditLimit => real().withDefault(const Constant(0))();
+  RealColumn get defaultGstPercent => real().withDefault(const Constant(0))();
   IntColumn get createdAt => integer()();
 
   @override
@@ -62,6 +63,8 @@ class InvoiceLines extends Table {
   RealColumn get qty => real()();
   RealColumn get rate => real()();
   RealColumn get lineGstPercent => real().withDefault(const Constant(0))();
+  RealColumn get lineSubtotal => real().withDefault(const Constant(0))();
+  RealColumn get lineGstAmount => real().withDefault(const Constant(0))();
   RealColumn get lineTotal => real()();
   RealColumn get marginPercent => real().withDefault(const Constant(0))();
 
@@ -94,7 +97,7 @@ class Settings extends Table {
 class StockMovements extends Table {
   TextColumn get id => text()();
   TextColumn get itemId => text()();
-  TextColumn get type => text()(); // 'in' or 'out'
+  TextColumn get type => text()();
   RealColumn get qty => real()();
   TextColumn get notes => text().nullable()();
   IntColumn get createdAt => integer()();
@@ -158,15 +161,17 @@ class InvoiceWithCustomer {
 
 class DailySummary {
   final double totalSales;
-  final double totalCollected;
+  final double collected;
+  final double pending;
   final int invoiceCount;
-  final double totalPending;
+  final List<InvoiceWithCustomer> invoices;
 
   DailySummary({
     required this.totalSales,
-    required this.totalCollected,
+    required this.collected,
+    required this.pending,
     required this.invoiceCount,
-    required this.totalPending,
+    required this.invoices,
   });
 }
 
@@ -176,6 +181,7 @@ class PeriodSummary {
   final double totalPending;
   final int invoiceCount;
   final double avgInvoiceValue;
+  final Map<String, double> dayWiseSales;
 
   PeriodSummary({
     required this.totalSales,
@@ -183,22 +189,25 @@ class PeriodSummary {
     required this.totalPending,
     required this.invoiceCount,
     required this.avgInvoiceValue,
+    required this.dayWiseSales,
   });
 }
 
 class CustomerReport {
-  final double totalBilled;
+  final double totalBusiness;
   final double totalPaid;
-  final double totalPending;
-  final int invoiceCount;
+  final double outstanding;
+  final int totalInvoices;
   final List<Invoice> invoices;
+  final List<Map<String, dynamic>> itemBreakdown;
 
   CustomerReport({
-    required this.totalBilled,
+    required this.totalBusiness,
     required this.totalPaid,
-    required this.totalPending,
-    required this.invoiceCount,
+    required this.outstanding,
+    required this.totalInvoices,
     required this.invoices,
+    required this.itemBreakdown,
   });
 }
 
@@ -234,30 +243,86 @@ class AppDatabase extends _$AppDatabase {
   // ── CUSTOMERS ──────────────────────────────────────────────────
   Future<List<Customer>> getAllCustomers() => select(customers).get();
 
-  Future<Customer?> getCustomerById(String id) =>
+  Future<Customer?> getCustomer(String id) =>
       (select(customers)..where((c) => c.id.equals(id))).getSingleOrNull();
 
-  Future<void> upsertCustomer(CustomersCompanion c) =>
-      into(customers).insertOnConflictUpdate(c);
+  Future<void> createCustomer({
+    required String id,
+    required String name,
+    required String phone,
+    String? address,
+    double creditLimit = 0,
+    double defaultGstPercent = 0,
+  }) =>
+      into(customers).insert(CustomersCompanion(
+        id: Value(id),
+        name: Value(name),
+        phone: Value(phone),
+        address: Value(address),
+        creditLimit: Value(creditLimit),
+        defaultGstPercent: Value(defaultGstPercent),
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ));
+
+  Future<void> updateCustomer(Customer c) =>
+      (update(customers)..where((t) => t.id.equals(c.id))).write(
+        CustomersCompanion(
+          name: Value(c.name),
+          phone: Value(c.phone),
+          address: Value(c.address),
+          creditLimit: Value(c.creditLimit),
+          defaultGstPercent: Value(c.defaultGstPercent),
+        ),
+      );
 
   Future<void> deleteCustomer(String id) =>
       (delete(customers)..where((c) => c.id.equals(id))).go();
 
+  Future<List<Customer>> getExceededCreditLimitCustomers() async {
+    final all = await getAllCustomers();
+    final result = <Customer>[];
+    for (final c in all) {
+      if (c.creditLimit <= 0) continue;
+      final outstanding = await getCustomerOutstanding(c.id);
+      if (outstanding > c.creditLimit) result.add(c);
+    }
+    return result;
+  }
+
   // ── ITEMS ──────────────────────────────────────────────────────
   Future<List<Item>> getAllItems() => select(items).get();
 
-  Future<void> upsertItem(ItemsCompanion item) =>
-      into(items).insertOnConflictUpdate(item);
+  Future<Item?> getItem(String id) =>
+      (select(items)..where((i) => i.id.equals(id))).getSingleOrNull();
 
-  Future<void> deleteItem(String id) =>
-      (delete(items)..where((i) => i.id.equals(id))).go();
+  Future<void> createItem({
+    required String id,
+    required String name,
+    required String unit,
+    double defaultRate = 0,
+    double gstPercent = 0,
+    double currentStock = 0,
+    double lowStockAlert = 10,
+  }) =>
+      into(items).insert(ItemsCompanion(
+        id: Value(id),
+        name: Value(name),
+        unit: Value(unit),
+        defaultRate: Value(defaultRate),
+        gstPercent: Value(gstPercent),
+        currentStock: Value(currentStock),
+        lowStockAlert: Value(lowStockAlert),
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ));
 
   Future<void> updateItem(ItemsCompanion item) =>
       (update(items)..where((i) => i.id.equals(item.id.value))).write(item);
 
+  Future<void> deleteItem(String id) =>
+      (delete(items)..where((i) => i.id.equals(id))).go();
+
   Future<void> addStock(String itemId, double qty, String notes) async {
-    final item = await (select(items)..where((i) => i.id.equals(itemId)))
-        .getSingleOrNull();
+    final item = await getItem(itemId);
     if (item == null) return;
     await (update(items)..where((i) => i.id.equals(itemId)))
         .write(ItemsCompanion(currentStock: Value(item.currentStock + qty)));
@@ -272,29 +337,59 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // ── INVOICES ───────────────────────────────────────────────────
+  Future<List<Invoice>> getAllInvoices() => select(invoices).get();
+
   Future<Invoice?> getInvoice(String id) =>
       (select(invoices)..where((i) => i.id.equals(id))).getSingleOrNull();
 
+  Future<String> generateInvoiceNo() async {
+    final all = await select(invoices).get();
+    final num = all.length + 1;
+    return 'INV${num.toString().padLeft(4, '0')}';
+  }
+
   Future<void> createInvoice({
-    required InvoicesCompanion invoice,
+    required String id,
+    required String invoiceNo,
+    required String customerId,
+    required int invoiceDate,
+    required double subtotal,
+    required double discountAmount,
+    required double gstAmount,
+    required double total,
+    required double paidAmount,
+    required double balanceAmount,
+    String? notes,
+    String? createdBy,
     required List<InvoiceLinesCompanion> lines,
   }) async {
-    await into(invoices).insert(invoice);
+    await into(invoices).insert(InvoicesCompanion(
+      id: Value(id),
+      invoiceNo: Value(invoiceNo),
+      customerId: Value(customerId),
+      invoiceDate: Value(invoiceDate),
+      subtotal: Value(subtotal),
+      discountAmount: Value(discountAmount),
+      gstAmount: Value(gstAmount),
+      total: Value(total),
+      paidAmount: Value(paidAmount),
+      balanceAmount: Value(balanceAmount),
+      notes: Value(notes),
+      createdBy: Value(createdBy),
+      createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+    ));
     for (final line in lines) {
       await into(invoiceLines).insert(line);
-      // Deduct stock
-      final item = await (select(items)
-            ..where((i) => i.id.equals(line.itemId.value)))
-          .getSingleOrNull();
+      final item = await getItem(line.itemId.value);
       if (item != null) {
-        await (update(items)..where((i) => i.id.equals(item.id)))
-            .write(ItemsCompanion(
+        await (update(items)..where((i) => i.id.equals(item.id))).write(
+            ItemsCompanion(
                 currentStock: Value(item.currentStock - line.qty.value)));
       }
     }
   }
 
-  Future<List<InvoiceWithCustomer>> getAllInvoicesWithCustomer() async {
+  Future<List<InvoiceWithCustomer>> getAllInvoicesWithCustomers() async {
     final rows = await (select(invoices).join([
       leftOuterJoin(customers, customers.id.equalsExp(invoices.customerId)),
     ])
@@ -331,12 +426,6 @@ class AppDatabase extends _$AppDatabase {
   Future<List<InvoiceLine>> getInvoiceLines(String invoiceId) =>
       (select(invoiceLines)..where((l) => l.invoiceId.equals(invoiceId))).get();
 
-  Future<String> getNextInvoiceNo() async {
-    final all = await select(invoices).get();
-    final num = all.length + 1;
-    return 'INV${num.toString().padLeft(4, '0')}';
-  }
-
   // ── PAYMENTS ───────────────────────────────────────────────────
   Future<List<Payment>> getCustomerPayments(String customerId) =>
       (select(payments)
@@ -344,8 +433,24 @@ class AppDatabase extends _$AppDatabase {
             ..orderBy([(p) => OrderingTerm.desc(p.paymentDate)]))
           .get();
 
-  Future<void> recordPayment(PaymentsCompanion payment) =>
-      into(payments).insert(payment);
+  Future<void> recordPayment({
+    required String id,
+    required String customerId,
+    required double amount,
+    required String mode,
+    String? reference,
+    String? notes,
+  }) =>
+      into(payments).insert(PaymentsCompanion(
+        id: Value(id),
+        customerId: Value(customerId),
+        paymentDate: Value(DateTime.now().millisecondsSinceEpoch),
+        amount: Value(amount),
+        mode: Value(mode),
+        reference: Value(reference),
+        notes: Value(notes),
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ));
 
   Future<void> recordPartialPayment({
     required String id,
@@ -379,14 +484,19 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  Future<double> getInvoicePaidAmount(String invoiceId) async {
-    final inv = await getInvoice(invoiceId);
-    return inv?.paidAmount ?? 0;
-  }
-
   Future<double> getCustomerOutstanding(String customerId) async {
     final invList = await getCustomerInvoices(customerId);
-    return invList.fold(0.0, (sum, i) => sum + i.balanceAmount);
+    return invList.fold<double>(0.0, (sum, i) => sum + i.balanceAmount);
+  }
+
+  Future<double> getTodaysSalesTotal() async {
+    final s = await getDailySummary(DateTime.now());
+    return s.totalSales;
+  }
+
+  Future<double> getTotalOutstanding() async {
+    final all = await select(invoices).get();
+    return all.fold<double>(0.0, (sum, i) => sum + i.balanceAmount);
   }
 
   // ── SETTINGS ───────────────────────────────────────────────────
@@ -400,6 +510,9 @@ class AppDatabase extends _$AppDatabase {
       into(settings).insertOnConflictUpdate(
           SettingsCompanion(key: Value(key), value: Value(value)));
 
+  // alias used by shop_profile_screen
+  Future<void> saveSetting(String key, String value) => setSetting(key, value);
+
   Future<Map<String, String>> getAllSettings() async {
     final rows = await select(settings).get();
     return {for (final r in rows) r.key: r.value};
@@ -407,8 +520,8 @@ class AppDatabase extends _$AppDatabase {
 
   // ── REPORTS ────────────────────────────────────────────────────
   Future<DailySummary> getDailySummary(DateTime date) async {
-    final start = DateTime(date.year, date.month, date.day)
-        .millisecondsSinceEpoch;
+    final start =
+        DateTime(date.year, date.month, date.day).millisecondsSinceEpoch;
     final end = DateTime(date.year, date.month, date.day, 23, 59, 59)
         .millisecondsSinceEpoch;
     final dayInvoices = await (select(invoices)
@@ -416,58 +529,104 @@ class AppDatabase extends _$AppDatabase {
               i.invoiceDate.isBiggerOrEqualValue(start) &
               i.invoiceDate.isSmallerOrEqualValue(end)))
         .get();
-    final totalSales =
-        dayInvoices.fold(0.0, (s, i) => s + i.total);
-    final totalCollected =
-        dayInvoices.fold(0.0, (s, i) => s + i.paidAmount);
-    final totalPending =
-        dayInvoices.fold(0.0, (s, i) => s + i.balanceAmount);
+    final allWithCustomer = await getAllInvoicesWithCustomers();
+    final dayWithCustomer = allWithCustomer
+        .where((i) => i.invoiceDate >= start && i.invoiceDate <= end)
+        .toList();
     return DailySummary(
-      totalSales: totalSales,
-      totalCollected: totalCollected,
+      totalSales: dayInvoices.fold<double>(0.0, (s, i) => s + i.total),
+      collected: dayInvoices.fold<double>(0.0, (s, i) => s + i.paidAmount),
+      pending: dayInvoices.fold<double>(0.0, (s, i) => s + i.balanceAmount),
       invoiceCount: dayInvoices.length,
-      totalPending: totalPending,
+      invoices: dayWithCustomer,
     );
   }
 
-  Future<PeriodSummary> getPeriodSummary(DateTime from, DateTime to) async {
-    final start = DateTime(from.year, from.month, from.day)
+  Future<PeriodSummary> getMonthlySummary(int year, int month) async {
+    final start = DateTime(year, month, 1).millisecondsSinceEpoch;
+    final end = DateTime(year, month + 1, 1)
+        .subtract(const Duration(seconds: 1))
         .millisecondsSinceEpoch;
-    final end = DateTime(to.year, to.month, to.day, 23, 59, 59)
+    return _getPeriodSummary(start, end);
+  }
+
+  Future<PeriodSummary> getWeeklySummary(DateTime weekStart) async {
+    final start =
+        DateTime(weekStart.year, weekStart.month, weekStart.day)
+            .millisecondsSinceEpoch;
+    final end = DateTime(weekStart.year, weekStart.month, weekStart.day + 7)
+        .subtract(const Duration(seconds: 1))
         .millisecondsSinceEpoch;
+    return _getPeriodSummary(start, end);
+  }
+
+  Future<PeriodSummary> _getPeriodSummary(int start, int end) async {
     final periodInvoices = await (select(invoices)
           ..where((i) =>
               i.invoiceDate.isBiggerOrEqualValue(start) &
               i.invoiceDate.isSmallerOrEqualValue(end)))
         .get();
     final totalSales =
-        periodInvoices.fold(0.0, (s, i) => s + i.total);
+        periodInvoices.fold<double>(0.0, (s, i) => s + i.total);
     final totalCollected =
-        periodInvoices.fold(0.0, (s, i) => s + i.paidAmount);
+        periodInvoices.fold<double>(0.0, (s, i) => s + i.paidAmount);
     final totalPending =
-        periodInvoices.fold(0.0, (s, i) => s + i.balanceAmount);
+        periodInvoices.fold<double>(0.0, (s, i) => s + i.balanceAmount);
+
+    // Build day-wise sales map
+    final dayWiseSales = <String, double>{};
+    for (final inv in periodInvoices) {
+      final d = DateTime.fromMillisecondsSinceEpoch(inv.invoiceDate);
+      final key = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      dayWiseSales[key] = (dayWiseSales[key] ?? 0) + inv.total;
+    }
+
     return PeriodSummary(
       totalSales: totalSales,
       totalCollected: totalCollected,
       totalPending: totalPending,
       invoiceCount: periodInvoices.length,
-      avgInvoiceValue: periodInvoices.isEmpty
-          ? 0
-          : totalSales / periodInvoices.length,
+      avgInvoiceValue:
+          periodInvoices.isEmpty ? 0 : totalSales / periodInvoices.length,
+      dayWiseSales: dayWiseSales,
     );
   }
 
   Future<CustomerReport> getCustomerReport(String customerId) async {
     final invList = await getCustomerInvoices(customerId);
-    final totalBilled = invList.fold(0.0, (s, i) => s + i.total);
-    final totalPaid = invList.fold(0.0, (s, i) => s + i.paidAmount);
-    final totalPending = invList.fold(0.0, (s, i) => s + i.balanceAmount);
+    final totalBusiness =
+        invList.fold<double>(0.0, (s, i) => s + i.total);
+    final totalPaid =
+        invList.fold<double>(0.0, (s, i) => s + i.paidAmount);
+    final outstanding =
+        invList.fold<double>(0.0, (s, i) => s + i.balanceAmount);
+
+    // Build item breakdown
+    final itemTotals = <String, Map<String, dynamic>>{};
+    for (final inv in invList) {
+      final lines = await getInvoiceLines(inv.id);
+      for (final l in lines) {
+        if (!itemTotals.containsKey(l.itemId)) {
+          itemTotals[l.itemId] = {
+            'name': l.itemNameSnapshot,
+            'qty': 0.0,
+            'total': 0.0,
+          };
+        }
+        itemTotals[l.itemId]!['qty'] =
+            (itemTotals[l.itemId]!['qty'] as double) + l.qty;
+        itemTotals[l.itemId]!['total'] =
+            (itemTotals[l.itemId]!['total'] as double) + l.lineTotal;
+      }
+    }
+
     return CustomerReport(
-      totalBilled: totalBilled,
+      totalBusiness: totalBusiness,
       totalPaid: totalPaid,
-      totalPending: totalPending,
-      invoiceCount: invList.length,
+      outstanding: outstanding,
+      totalInvoices: invList.length,
       invoices: invList,
+      itemBreakdown: itemTotals.values.toList(),
     );
   }
 
@@ -543,6 +702,36 @@ class AppDatabase extends _$AppDatabase {
 
   // ── BACKUP ─────────────────────────────────────────────────────
   Future<Map<String, dynamic>> exportAllData() async {
+    final allInvoices = await getAllInvoices();
+    final invoiceData = <Map<String, dynamic>>[];
+    for (final inv in allInvoices) {
+      final lines = await getInvoiceLines(inv.id);
+      invoiceData.add({
+        'id': inv.id,
+        'invoiceNo': inv.invoiceNo,
+        'customerId': inv.customerId,
+        'invoiceDate': inv.invoiceDate,
+        'subtotal': inv.subtotal,
+        'discountAmount': inv.discountAmount,
+        'gstAmount': inv.gstAmount,
+        'total': inv.total,
+        'paidAmount': inv.paidAmount,
+        'balanceAmount': inv.balanceAmount,
+        'notes': inv.notes,
+        'lines': lines.map((l) => {
+              'id': l.id,
+              'itemId': l.itemId,
+              'itemNameSnapshot': l.itemNameSnapshot,
+              'unit': l.unit,
+              'qty': l.qty,
+              'rate': l.rate,
+              'lineGstPercent': l.lineGstPercent,
+              'lineSubtotal': l.lineSubtotal,
+              'lineGstAmount': l.lineGstAmount,
+              'lineTotal': l.lineTotal,
+            }).toList(),
+      });
+    }
     return {
       'customers': (await getAllCustomers())
           .map((c) => {
@@ -551,6 +740,7 @@ class AppDatabase extends _$AppDatabase {
                 'phone': c.phone,
                 'address': c.address,
                 'creditLimit': c.creditLimit,
+                'defaultGstPercent': c.defaultGstPercent,
                 'createdAt': c.createdAt,
               })
           .toList(),
@@ -566,6 +756,7 @@ class AppDatabase extends _$AppDatabase {
                 'createdAt': i.createdAt,
               })
           .toList(),
+      'invoices': invoiceData,
       'settings': await getAllSettings(),
     };
   }
