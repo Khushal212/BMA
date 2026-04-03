@@ -460,16 +460,16 @@ class _CustomerReportTabState
                           backgroundColor:
                               Colors.purple.shade100,
                           child: Text(
-                              item.itemName[0].toUpperCase(),
+                              item['itemName'][0].toUpperCase()
                               style: TextStyle(
                                   color: Colors.purple.shade700,
                                   fontWeight: FontWeight.bold)),
                         ),
-                        title: Text(item.itemName),
+                        title: Text(item['itemName']),
                         subtitle: Text(
-                            '${item.totalQty.toStringAsFixed(1)} ${item.unit}'),
+                            '${item['totalQty'].toStringAsFixed(1)} ${item['unit']}'),
                         trailing: Text(
-                            'Rs.${item.totalAmount.toStringAsFixed(0)}',
+                            'Rs.${item['totalAmount'].toStringAsFixed(0)}',
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold)),
                       ),
