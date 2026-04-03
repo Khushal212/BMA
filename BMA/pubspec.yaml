@@ -39,9 +39,9 @@ dependencies:
   # Image picker for custom QR upload
   image_picker: ^1.0.4
 
-  # Contacts import
+  # Contacts import — replaced contacts_service with flutter_contacts
   permission_handler: ^11.0.1
-  contacts_service: ^0.6.3
+  flutter_contacts: ^1.1.9+1
 
   # Material / Fonts
   google_fonts: ^6.1.0
