@@ -1,331 +1,461 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' show Value;
 import '../database/app_database.dart';
 import '../main.dart';
 
-class ItemsScreen extends StatefulWidget {
-  const ItemsScreen({Key? key}) : super(key: key);
+class NewInvoiceScreen extends StatefulWidget {
+  const NewInvoiceScreen({Key? key}) : super(key: key);
   @override
-  State<ItemsScreen> createState() => _ItemsScreenState();
+  State<NewInvoiceScreen> createState() => _NewInvoiceScreenState();
 }
 
-class _ItemsScreenState extends State<ItemsScreen> {
-  final _searchController = TextEditingController();
-  String _query = '';
-  List<Item> _items = [];
-  bool _loading = true;
+class _InvoiceLine {
+  String? itemId;
+  String itemName = '';
+  String unit = '';
+  double qty = 1;
+  double rate = 0;
+  double gstPercent = 0;
+  double marginPercent = 0;
 
-  final List<String> _units = [
-    'kg', 'gram', 'crate', 'bunch', 'box', 'bag', 'piece', 'dozen', 'litre'
-  ];
+  final TextEditingController qtyCtrl = TextEditingController(text: '1');
+  final TextEditingController rateCtrl = TextEditingController(text: '0');
+  final TextEditingController gstCtrl = TextEditingController(text: '0');
+  final TextEditingController marginCtrl = TextEditingController(text: '0');
+
+  double get lineSubtotal => qty * rate;
+  double get marginAmount => lineSubtotal * marginPercent / 100;
+  double get afterMargin => lineSubtotal + marginAmount;
+  double get lineGstAmount => afterMargin * gstPercent / 100;
+  double get lineTotal => afterMargin + lineGstAmount;
+
+  void dispose() {
+    qtyCtrl.dispose();
+    rateCtrl.dispose();
+    gstCtrl.dispose();
+    marginCtrl.dispose();
+  }
+}
+
+class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
+  String? _selectedCustomerId;
+  Customer? _selectedCustomer;
+  double _customerOutstanding = 0;
+
+  final List<_InvoiceLine> _lines = [];
+  double _discountPercent = 0;
+  String _paymentType = 'CREDIT';
+  double _paidAmount = 0;
+  bool _saving = false;
+
+  List<Customer> _customers = [];
+  List<Item> _items = [];
 
   @override
   void initState() {
     super.initState();
-    _loadItems();
+    _lines.add(_InvoiceLine());
+    _loadData();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    for (final l in _lines) l.dispose();
     super.dispose();
   }
 
-  Future<void> _loadItems() async {
-    final list = await context.read<AppDatabase>().getAllItems();
-    if (mounted) setState(() { _items = list; _loading = false; });
-  }
-
-  List<Item> get _filtered {
-    final q = _query.trim().toLowerCase();
-    if (q.isEmpty) return _items;
-    return _items.where((i) => i.name.toLowerCase().contains(q)).toList();
-  }
-
-  String? _validateItemName(String? v) {
-    final l = context.l10n;
-    if (v == null || v.trim().isEmpty) return l.nameRequired;
-    if (v.trim().length < 2) return l.nameTooShort;
-    if (v.trim().length > 50) return l.nameTooLong;
-    return null;
-  }
-
-  String? _validateRate(String? v) {
-    final l = context.l10n;
-    if (v == null || v.trim().isEmpty) return null;
-    final rate = double.tryParse(v.trim());
-    if (rate == null) return l.invalidNumber;
-    if (rate < 0) return l.cannotBeNegative;
-    return null;
-  }
-
-  String? _validateGst(String? v) {
-    final l = context.l10n;
-    if (v == null || v.trim().isEmpty) return l.required;
-    final gst = double.tryParse(v.trim());
-    if (gst == null) return l.invalidNumber;
-    if (gst < 0) return l.cannotBeNegative;
-    if (gst > 28) return '${l.cannotExceed} 28%';
-    return null;
-  }
-
-  Future<void> _showAddEditDialog({Item? existing}) async {
-    final l = context.l10n;
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final rateCtrl = TextEditingController(
-        text: existing?.defaultRate?.toStringAsFixed(2) ?? '');
-    final gstCtrl = TextEditingController(
-        text: (existing?.gstPercent ?? 0).toStringAsFixed(0));
-    String unit = existing?.unit ?? 'kg';
-    final formKey = GlobalKey<FormState>();
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setDlg) {
-        return AlertDialog(
-          title: Text(existing == null ? l.addItem : l.editItem),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                TextFormField(
-                  controller: nameCtrl,
-                  decoration: InputDecoration(
-                    labelText: l.itemName,
-                    hintText: l.itemNameHint,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.inventory_2),
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                  validator: _validateItemName,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: unit,
-                  decoration: InputDecoration(
-                    labelText: l.unit,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.scale),
-                  ),
-                  items: _units
-                      .map((u) => DropdownMenuItem(value: u, child: Text(u)))
-                      .toList(),
-                  onChanged: (v) => setDlg(() => unit = v!),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: rateCtrl,
-                  decoration: InputDecoration(
-                    labelText: l.defaultRate,
-                    hintText: l.defaultRateHint,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.currency_rupee),
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                  ],
-                  validator: _validateRate,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: gstCtrl,
-                  decoration: InputDecoration(
-                    labelText: l.gstPercent,
-                    hintText: l.gstPercentHint,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.percent),
-                    suffixText: '%',
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,1}')),
-                  ],
-                  validator: _validateGst,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                ),
-              ]),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
-            ElevatedButton(
-              onPressed: () { if (formKey.currentState!.validate()) Navigator.pop(ctx, true); },
-              child: Text(l.save),
-            ),
-          ],
-        );
-      }),
-    );
-
-    if (result != true) return;
+  Future<void> _loadData() async {
     final db = context.read<AppDatabase>();
-    final rate = rateCtrl.text.trim().isEmpty ? null : double.parse(rateCtrl.text.trim());
-    final gst = double.parse(gstCtrl.text.trim());
-
-    if (existing == null) {
-      await db.createItem(
-        id: const Uuid().v4(),
-        name: nameCtrl.text.trim(),
-        unit: unit,
-        defaultRate: rate,
-        gstPercent: gst,
-      );
-    } else {
-      await db.updateItem(ItemsCompanion(
-        id: Value(existing.id),
-        name: Value(nameCtrl.text.trim()),
-        unit: Value(unit),
-        defaultRate: Value(rate),
-        gstPercent: Value(gst),
-      ));
-    }
-    _loadItems();
+    final customers = await db.getAllCustomers();
+    final items = await db.getAllItems();
+    if (mounted) setState(() { _customers = customers; _items = items; });
   }
 
-  Future<void> _deleteItem(Item item) async {
+  Future<void> _onCustomerChanged(String? id) async {
+    if (id == null) return;
+    final db = context.read<AppDatabase>();
+    final customer = await db.getCustomer(id);
+    final outstanding = await db.getCustomerOutstanding(id);
+    if (mounted) {
+      setState(() {
+        _selectedCustomerId = id;
+        _selectedCustomer = customer;
+        _customerOutstanding = outstanding;
+      });
+    }
+  }
+
+  double get _subtotal => _lines.fold(0.0, (s, l) => s + l.afterMargin);
+  double get _discountAmount => _subtotal * _discountPercent / 100;
+  double get _gstAmount => _lines.fold(0.0, (s, l) => s + l.lineGstAmount);
+  double get _total => _subtotal - _discountAmount + _gstAmount;
+  double get _balanceAmount {
+    if (_paymentType == 'CREDIT') return _total;
+    return (_total - _paidAmount).clamp(0.0, double.infinity);
+  }
+
+  bool get _willExceedLimit =>
+      _selectedCustomer != null &&
+      (_customerOutstanding + _balanceAmount) > _selectedCustomer!.creditLimit;
+
+  Future<void> _saveInvoice() async {
     final l = context.l10n;
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l.deleteItem),
-        content: Text('"${item.name}"? ${l.deleteItemConfirm}'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l.delete),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-    await context.read<AppDatabase>().deleteItem(item.id);
-    _loadItems();
+    if (_selectedCustomerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.pleaseSelectCustomer)));
+      return;
+    }
+    final validLines = _lines.where((l) => l.itemId != null && l.qty > 0).toList();
+    if (validLines.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.addAtLeastOneItem)));
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      final db = context.read<AppDatabase>();
+      final invoiceNo = await db.generateInvoiceNo();
+      final invoiceId = const Uuid().v4();
+
+      final lineData = validLines.map((ln) => InvoiceLinesCompanion(
+        id: Value(const Uuid().v4()),
+        invoiceId: Value(invoiceId),
+        itemId: Value(ln.itemId!),
+        itemNameSnapshot: Value(ln.itemName),
+        qty: Value(ln.qty),
+        unit: Value(ln.unit),
+        rate: Value(ln.rate),
+        lineSubtotal: Value(ln.afterMargin),
+        lineGstPercent: Value(ln.gstPercent),
+        lineGstAmount: Value(ln.lineGstAmount),
+        lineTotal: Value(ln.lineTotal),
+        marginPercent: Value(ln.marginPercent),
+      )).toList();
+
+      await db.createInvoice(
+        id: invoiceId,
+        invoiceNo: invoiceNo,
+        customerId: _selectedCustomerId!,
+        invoiceDate: DateTime.now().millisecondsSinceEpoch,
+        subtotal: _subtotal,
+        discountPercent: _discountPercent,
+        discountAmount: _discountAmount,
+        gstAmount: _gstAmount,
+        total: _total,
+        paidAmount: _paymentType == 'CREDIT' ? 0 : _paidAmount,
+        balanceAmount: _balanceAmount,
+        paymentType: _paymentType,
+        lines: lineData,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('$invoiceNo ${l.invoiceSaved}'),
+          backgroundColor: Colors.green,
+        ));
+        for (final ln in _lines) ln.dispose();
+        setState(() {
+          _selectedCustomerId = null;
+          _selectedCustomer = null;
+          _customerOutstanding = 0;
+          _lines.clear();
+          _lines.add(_InvoiceLine());
+          _discountPercent = 0;
+          _paymentType = 'CREDIT';
+          _paidAmount = 0;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    if (_saving) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l.items),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Center(
-              child: Text('${_items.length}',
-                  style: TextStyle(
-                      color: Colors.green.shade700, fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditDialog(),
-        child: const Icon(Icons.add),
-      ),
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: TextField(
-            controller: _searchController,
+      appBar: AppBar(title: Text(l.newInvoice), centerTitle: true),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Customer selector
+          DropdownButtonFormField<String>(
+            value: _selectedCustomerId,
             decoration: InputDecoration(
-              hintText: l.searchItem,
-              prefixIcon: const Icon(Icons.search),
+              labelText: l.selectCustomer,
               border: const OutlineInputBorder(),
-              suffixIcon: _query.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () { _searchController.clear(); setState(() => _query = ''); })
-                  : null,
             ),
-            onChanged: (v) => setState(() => _query = v),
+            items: _customers.map((c) => DropdownMenuItem(
+                value: c.id, child: Text(c.name))).toList(),
+            onChanged: _onCustomerChanged,
           ),
-        ),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _filtered.isEmpty
-                  ? Center(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade400),
-                        const SizedBox(height: 12),
-                        Text(
-                          _items.isEmpty ? l.noItemsYet : 'No results for "$_query"',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey.shade500),
-                        ),
-                      ]),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadItems,
-                      child: ListView.separated(
-                        itemCount: _filtered.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (ctx, idx) {
-                          final item = _filtered[idx];
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.green.shade100,
-                              child: Text(item.name[0].toUpperCase(),
-                                  style: TextStyle(
-                                      color: Colors.green.shade700,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                            title: Text(item.name,
-                                style: const TextStyle(fontWeight: FontWeight.w600)),
-                            subtitle: Text('${item.unit}  •  ${l.gstPercent}: ${item.gstPercent.toStringAsFixed(0)}%'),
-                            trailing: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  item.defaultRate != null
-                                      ? 'Rs.${item.defaultRate!.toStringAsFixed(0)}'
-                                      : l.noRate,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: item.defaultRate != null
-                                          ? Colors.green.shade700
-                                          : Colors.grey),
-                                ),
-                                Text(l.default_,
-                                    style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                              ],
-                            ),
-                            onTap: () => showModalBottomSheet(
-                              context: ctx,
-                              builder: (_) => SafeArea(
-                                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                                  ListTile(
-                                    leading: const Icon(Icons.edit),
-                                    title: Text(l.edit),
-                                    onTap: () { Navigator.pop(ctx); _showAddEditDialog(existing: item); },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.delete, color: Colors.red),
-                                    title: Text(l.delete,
-                                        style: const TextStyle(color: Colors.red)),
-                                    onTap: () { Navigator.pop(ctx); _deleteItem(item); },
-                                  ),
-                                ]),
-                              ),
-                            ),
-                            onLongPress: () => _showAddEditDialog(existing: item),
-                          );
+
+          if (_selectedCustomer != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _willExceedLimit ? Colors.red.shade50 : Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: _willExceedLimit ? Colors.red.shade300 : Colors.green.shade300),
+              ),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('${l.due}: Rs.${_customerOutstanding.toStringAsFixed(0)}'),
+                Text('${l.limit}: Rs.${_selectedCustomer!.creditLimit.toStringAsFixed(0)}'),
+                if (_willExceedLimit)
+                  Text(l.willExceed,
+                      style: const TextStyle(
+                          color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+              ]),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+          Text(l.items,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          const SizedBox(height: 8),
+
+          // Invoice lines
+          ..._lines.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final line = entry.value;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(children: [
+                  Row(children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: line.itemId,
+                        decoration: InputDecoration(
+                            labelText: l.items,
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                        items: _items.map((it) => DropdownMenuItem(
+                            value: it.id,
+                            child: Text(it.name, overflow: TextOverflow.ellipsis))).toList(),
+                        onChanged: (v) {
+                          final it = _items.firstWhere((i) => i.id == v);
+                          setState(() {
+                            line.itemId = v;
+                            line.itemName = it.name;
+                            line.unit = it.unit;
+                            line.gstPercent = it.gstPercent;
+                            if (it.defaultRate != null) {
+                              line.rate = it.defaultRate!;
+                              line.rateCtrl.text = it.defaultRate!.toStringAsFixed(0);
+                            }
+                            line.gstCtrl.text = it.gstPercent.toStringAsFixed(0);
+                          });
                         },
                       ),
                     ),
-        ),
-      ]),
+                    if (_lines.length > 1)
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        onPressed: () => setState(() => _lines.removeAt(idx)),
+                      ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: line.qtyCtrl,
+                        decoration: InputDecoration(
+                            labelText: 'Qty (${line.unit.isEmpty ? "unit" : line.unit})',
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => setState(() => line.qty = double.tryParse(v) ?? 1),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: line.rateCtrl,
+                        decoration: InputDecoration(
+                            labelText: '${l.defaultRate.replaceAll(' (Rs.)', '')} (Rs.)',
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => setState(() => line.rate = double.tryParse(v) ?? 0),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: line.marginCtrl,
+                        decoration: InputDecoration(
+                            labelText: l.marginPercent,
+                            hintText: '0',
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => setState(
+                            () => line.marginPercent = double.tryParse(v) ?? 0),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: line.gstCtrl,
+                        decoration: InputDecoration(
+                            labelText: l.gstPercent,
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => setState(
+                            () => line.gstPercent = double.tryParse(v) ?? 0),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: Colors.grey.shade50, borderRadius: BorderRadius.circular(6)),
+                    child: Column(children: [
+                      if (line.marginPercent > 0)
+                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                          Text(
+                            '${l.base}: Rs.${line.lineSubtotal.toStringAsFixed(0)}  +  '
+                            '${l.margin}(${line.marginPercent.toStringAsFixed(0)}%): Rs.${line.marginAmount.toStringAsFixed(0)}',
+                            style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        ]),
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                        Text('${l.lineTotal}:',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text('Rs.${line.lineTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, color: Colors.green, fontSize: 13)),
+                      ]),
+                    ]),
+                  ),
+                ]),
+              ),
+            );
+          }),
+
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _lines.add(_InvoiceLine())),
+            icon: const Icon(Icons.add),
+            label: Text(l.addItemLine),
+          ),
+
+          const SizedBox(height: 16),
+          const Divider(),
+
+          // Discount
+          Row(children: [
+            Text('${l.discount}: '),
+            Expanded(
+              child: Slider(
+                value: _discountPercent,
+                min: 0, max: 30, divisions: 30,
+                label: '${_discountPercent.toStringAsFixed(0)}%',
+                onChanged: (v) => setState(() => _discountPercent = v),
+              ),
+            ),
+            Text('${_discountPercent.toStringAsFixed(0)}%'),
+          ]),
+
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _paymentType,
+            decoration: InputDecoration(
+                labelText: l.paymentType, border: const OutlineInputBorder()),
+            items: ['CASH', 'UPI', 'BANK', 'CREDIT', 'MIXED']
+                .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                .toList(),
+            onChanged: (v) => setState(() => _paymentType = v!),
+          ),
+
+          if (_paymentType != 'CREDIT') ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              decoration: InputDecoration(
+                  labelText: l.paidAmount, border: const OutlineInputBorder()),
+              keyboardType: TextInputType.number,
+              onChanged: (v) => setState(() => _paidAmount = double.tryParse(v) ?? 0),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+          const Divider(),
+
+          // Summary
+          Card(
+            color: Colors.grey.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(children: [
+                _summaryRow(l.subtotalAfterMargin, _subtotal),
+                if (_discountAmount > 0)
+                  _summaryRow(
+                    '${l.discount} (${_discountPercent.toStringAsFixed(0)}%)',
+                    -_discountAmount,
+                    color: Colors.orange,
+                  ),
+                if (_gstAmount > 0) _summaryRow(l.gst, _gstAmount),
+                const Divider(),
+                _summaryRow(l.total, _total, bold: true, fontSize: 18),
+                if (_paymentType != 'CREDIT' && _paidAmount > 0)
+                  _summaryRow(l.paid, -_paidAmount, color: Colors.green),
+                _summaryRow(
+                  l.balanceDue,
+                  _balanceAmount,
+                  bold: true,
+                  color: _balanceAmount > 0 ? Colors.red : Colors.green,
+                ),
+              ]),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: _saveInvoice,
+              icon: const Icon(Icons.save),
+              label: Text(l.generateSaveInvoice,
+                  style: const TextStyle(fontSize: 16)),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ]),
+      ),
     );
   }
+
+  Widget _summaryRow(String label, double amount,
+      {bool bold = false, Color? color, double fontSize = 14}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+          Text('Rs.${amount.abs().toStringAsFixed(2)}',
+              style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+                  color: color)),
+        ]),
+      );
 }
