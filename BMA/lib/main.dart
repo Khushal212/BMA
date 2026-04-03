@@ -118,6 +118,9 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey =
+      GlobalKey<ScaffoldState>();
+
   void jumpTo(int index) => setState(() => _selectedIndex = index);
 
   @override
@@ -133,6 +136,9 @@ class _MainNavigationState extends State<MainNavigation> {
     ];
 
     return Scaffold(
+      key: _scaffoldKey,
+      // Increase drag width so swipe from edge opens drawer easily
+      drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.25,
       body: screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -155,6 +161,16 @@ class _MainNavigationState extends State<MainNavigation> {
               icon: Icon(Icons.history), label: 'History'),
         ],
       ),
+      // Floating menu button — always visible bottom right
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton.small(
+              heroTag: 'menu_fab',
+              backgroundColor: Colors.green.shade700,
+              onPressed: () =>
+                  _scaffoldKey.currentState?.openDrawer(),
+              child: const Icon(Icons.menu, color: Colors.white),
+            )
+          : null,
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -170,7 +186,8 @@ class _MainNavigationState extends State<MainNavigation> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Container(
-                    width: 52, height: 52,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -200,19 +217,24 @@ class _MainNavigationState extends State<MainNavigation> {
               title: const Text('Dark Mode'),
               value: tp.isDark,
               activeColor: Colors.green.shade600,
-              onChanged: (_) => context.read<ThemeProvider>().toggleTheme(),
+              onChanged: (_) =>
+                  context.read<ThemeProvider>().toggleTheme(),
             ),
+
             // Staff Management
             ListTile(
-              leading: Icon(Icons.group,
-                  color: Colors.indigo.shade600),
+              leading:
+                  Icon(Icons.group, color: Colors.indigo.shade600),
               title: const Text('Staff Management'),
-              subtitle: const Text('Add staff with PIN + permissions'),
+              subtitle:
+                  const Text('Add staff with PIN + permissions'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const StaffScreen()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const StaffScreen()));
               },
             ),
 
@@ -225,8 +247,10 @@ class _MainNavigationState extends State<MainNavigation> {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const SyncScreen()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const SyncScreen()));
               },
             ),
 
@@ -237,12 +261,16 @@ class _MainNavigationState extends State<MainNavigation> {
               leading: Icon(Icons.store,
                   color: Colors.green.shade700),
               title: const Text('Shop Profile'),
-              subtitle: const Text('Name, address, GSTIN, UPI'),
+              subtitle:
+                  const Text('Name, address, GSTIN, UPI'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const ShopProfileScreen()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            const ShopProfileScreen()));
               },
             ),
 
@@ -251,12 +279,16 @@ class _MainNavigationState extends State<MainNavigation> {
               leading: Icon(Icons.bar_chart,
                   color: Colors.purple.shade600),
               title: const Text('Reports'),
-              subtitle: const Text('Monthly, weekly, customer'),
+              subtitle:
+                  const Text('Monthly, weekly, customer'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const ReportsScreen()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            const ReportsScreen()));
               },
             ),
 
@@ -269,8 +301,10 @@ class _MainNavigationState extends State<MainNavigation> {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const StockScreen()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const StockScreen()));
               },
             ),
 
@@ -283,8 +317,10 @@ class _MainNavigationState extends State<MainNavigation> {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const BackupScreen()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const BackupScreen()));
               },
             ),
 
@@ -293,14 +329,19 @@ class _MainNavigationState extends State<MainNavigation> {
               leading: Icon(Icons.language,
                   color: Colors.green.shade600),
               title: const Text('Language / भाषा'),
-              subtitle: Text(AppLanguages.names[
-                      context.read<LocaleProvider>().locale.languageCode] ??
+              subtitle: Text(AppLanguages.names[context
+                          .read<LocaleProvider>()
+                          .locale
+                          .languageCode] ??
                   'English'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const SettingsScreen()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            const SettingsScreen()));
               },
             ),
 
@@ -319,18 +360,33 @@ class _MainNavigationState extends State<MainNavigation> {
 
 class AppLanguages {
   static const List<Locale> supported = [
-    Locale('en'), Locale('hi'), Locale('mr'), Locale('gu'),
-    Locale('ta'), Locale('te'), Locale('bn'), Locale('kn'),
-    Locale('ml'), Locale('pa'), Locale('or'), Locale('ur'),
+    Locale('en'),
+    Locale('hi'),
+    Locale('mr'),
+    Locale('gu'),
+    Locale('ta'),
+    Locale('te'),
+    Locale('bn'),
+    Locale('kn'),
+    Locale('ml'),
+    Locale('pa'),
+    Locale('or'),
+    Locale('ur'),
     Locale('as'),
   ];
   static const Map<String, String> names = {
-    'en': 'English', 'hi': 'हिंदी (Hindi)',
-    'mr': 'मराठी (Marathi)', 'gu': 'ગુજરાતી (Gujarati)',
-    'ta': 'தமிழ் (Tamil)', 'te': 'తెలుగు (Telugu)',
-    'bn': 'বাংলা (Bengali)', 'kn': 'ಕನ್ನಡ (Kannada)',
-    'ml': 'മലയാളം (Malayalam)', 'pa': 'ਪੰਜਾਬੀ (Punjabi)',
-    'or': 'ଓଡ଼ିଆ (Odia)', 'ur': 'اردو (Urdu)',
+    'en': 'English',
+    'hi': 'हिंदी (Hindi)',
+    'mr': 'मराठी (Marathi)',
+    'gu': 'ગુજરાતી (Gujarati)',
+    'ta': 'தமிழ் (Tamil)',
+    'te': 'తెలుగు (Telugu)',
+    'bn': 'বাংলা (Bengali)',
+    'kn': 'ಕನ್ನಡ (Kannada)',
+    'ml': 'മലയാളം (Malayalam)',
+    'pa': 'ਪੰਜਾਬੀ (Punjabi)',
+    'or': 'ଓଡ଼ିଆ (Odia)',
+    'ur': 'اردو (Urdu)',
     'as': 'অসমীয়া (Assamese)',
   };
 }
