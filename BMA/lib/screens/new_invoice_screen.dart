@@ -112,24 +112,26 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       final invoiceNo = await db.generateInvoiceNo();
       final invoiceId = const Uuid().v4();
 
-      final lineData = validLines.map((l) => InvoiceLineData(
-            id: const Uuid().v4(),
-            itemId: l.itemId!,
-            itemName: l.itemName,
-            qty: l.qty,
-            unit: l.unit,
-            rate: l.rate,
-            lineSubtotal: l.afterMargin,
-            lineGstPercent: l.gstPercent,
-            lineGstAmount: l.lineGstAmount,
-            lineTotal: l.lineTotal,
-          )).toList();
-
+      final lineData = validLines.map((l) => InvoiceLinesCompanion(
+        id: Value(const Uuid().v4()),
+        invoiceId: Value(invoiceId),
+        itemId: Value(l.itemId!),
+        itemNameSnapshot: Value(l.itemName),
+        qty: Value(l.qty),
+        unit: Value(l.unit),
+        rate: Value(l.rate),
+        lineSubtotal: Value(l.afterMargin),
+        lineGstPercent: Value(l.gstPercent),
+        lineGstAmount: Value(l.lineGstAmount),
+        lineTotal: Value(l.lineTotal),
+        marginPercent: Value(l.marginPercent),
+      )).toList();
+      
       await db.createInvoice(
         id: invoiceId,
         invoiceNo: invoiceNo,
         customerId: _selectedCustomerId!,
-        lines: lineData,
+        invoiceDate: DateTime.now().millisecondsSinceEpoch,
         subtotal: _subtotal,
         discountPercent: _discountPercent,
         discountAmount: _discountAmount,
@@ -138,6 +140,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
         paidAmount: _paymentType == 'CREDIT' ? 0 : _paidAmount,
         balanceAmount: _balanceAmount,
         paymentType: _paymentType,
+        lines: lineData,
       );
 
       if (mounted) {
