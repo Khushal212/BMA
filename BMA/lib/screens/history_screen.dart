@@ -6,13 +6,12 @@ import 'package:printing/printing.dart';
 import '../database/app_database.dart';
 import '../utils/invoice_pdf.dart';
 import 'package:flutter/services.dart';
+import '../main.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({Key? key}) : super(key: key);
-
   @override
-  State<HistoryScreen> createState() =>
-      _HistoryScreenState();
+  State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
@@ -61,15 +60,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final fmt = DateFormat('dd MMM yyyy');
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invoice History'),
+        title: Text(l.invoiceHistory),
         centerTitle: true,
         actions: [
-          IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _load),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),
       body: Column(children: [
@@ -78,26 +77,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: TextField(
             controller: _searchCtrl,
             decoration: InputDecoration(
-              hintText: 'Search customer or invoice...',
+              hintText: l.searchCustomerOrInvoice,
               prefixIcon: const Icon(Icons.search),
               border: const OutlineInputBorder(),
               suffixIcon: _searchCtrl.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(_applyFilter);
-                      })
+                      onPressed: () { _searchCtrl.clear(); setState(_applyFilter); })
                   : null,
             ),
             onChanged: (_) => setState(_applyFilter),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Row(children: [
-            for (final f in ['All', 'Paid', 'Pending'])
+            for (final f in [l.all, l.paidFilter, l.pendingFilter])
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: FilterChip(
@@ -111,78 +106,58 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ),
             const Spacer(),
-            Text('${_filtered.length} invoices',
-                style: const TextStyle(
-                    fontSize: 12, color: Colors.grey)),
+            Text('${_filtered.length} ${l.invoices}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ]),
         ),
         Expanded(
           child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator())
               : _filtered.isEmpty
-                  ? const Center(
-                      child: Text('No invoices found',
-                          style: TextStyle(
-                              color: Colors.grey)))
+                  ? Center(
+                      child: Text(l.noInvoicesFound,
+                          style: const TextStyle(color: Colors.grey)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView.separated(
                         itemCount: _filtered.length,
-                        separatorBuilder: (_, __) =>
-                            const Divider(height: 1),
+                        separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (ctx, i) {
                           final inv = _filtered[i];
-                          final isPaid =
-                              inv.balanceAmount == 0;
+                          final isPaid = inv.balanceAmount == 0;
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: isPaid
                                   ? Colors.green.shade100
                                   : Colors.orange.shade100,
                               child: Icon(
-                                isPaid
-                                    ? Icons.check_circle
-                                    : Icons.pending,
-                                color: isPaid
-                                    ? Colors.green
-                                    : Colors.orange,
+                                isPaid ? Icons.check_circle : Icons.pending,
+                                color: isPaid ? Colors.green : Colors.orange,
                                 size: 20,
                               ),
                             ),
                             title: Text(inv.customerName,
-                                style: const TextStyle(
-                                    fontWeight:
-                                        FontWeight.w600)),
+                                style: const TextStyle(fontWeight: FontWeight.w600)),
                             subtitle: Text(
                                 '${inv.invoiceNo}  •  ${fmt.format(DateTime.fromMillisecondsSinceEpoch(inv.invoiceDate))}'),
                             trailing: Column(
                               mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                    'Rs.${inv.total.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                        fontWeight:
-                                            FontWeight.bold)),
+                                Text('Rs.${inv.total.toStringAsFixed(0)}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold)),
                                 Text(
                                   isPaid
-                                      ? 'PAID'
-                                      : 'Due: Rs.${inv.balanceAmount.toStringAsFixed(0)}',
+                                      ? l.paidStatus
+                                      : '${l.due}: Rs.${inv.balanceAmount.toStringAsFixed(0)}',
                                   style: TextStyle(
                                       fontSize: 11,
-                                      color: isPaid
-                                          ? Colors.green
-                                          : Colors.red,
-                                      fontWeight:
-                                          FontWeight.w600),
+                                      color: isPaid ? Colors.green : Colors.red,
+                                      fontWeight: FontWeight.w600),
                                 ),
                               ],
                             ),
-                            onTap: () =>
-                                _showInvoiceDetail(
-                                    context, inv, fmt),
+                            onTap: () => _showInvoiceDetail(context, inv, fmt),
                           );
                         },
                       ),
@@ -192,20 +167,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  void _showInvoiceDetail(BuildContext context,
-      InvoiceWithCustomer inv, DateFormat fmt) {
+  void _showInvoiceDetail(BuildContext context, InvoiceWithCustomer inv, DateFormat fmt) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-              top: Radius.circular(20))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.75,
         maxChildSize: 0.95,
-        builder: (_, ctrl) => _InvoiceDetailSheet(
-            inv: inv, fmt: fmt, controller: ctrl),
+        builder: (_, ctrl) =>
+            _InvoiceDetailSheet(inv: inv, fmt: fmt, controller: ctrl),
       ),
     );
   }
@@ -217,15 +190,13 @@ class _InvoiceDetailSheet extends StatelessWidget {
   final ScrollController controller;
 
   const _InvoiceDetailSheet(
-      {required this.inv,
-      required this.fmt,
-      required this.controller});
+      {required this.inv, required this.fmt, required this.controller});
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     return FutureBuilder<List<InvoiceLine>>(
-      future:
-          context.read<AppDatabase>().getInvoiceLines(inv.id),
+      future: context.read<AppDatabase>().getInvoiceLines(inv.id),
       builder: (ctx, snap) {
         final lines = snap.data ?? [];
         return ListView(
@@ -234,125 +205,85 @@ class _InvoiceDetailSheet extends StatelessWidget {
           children: [
             Center(
               child: Container(
-                width: 40,
-                height: 4,
+                width: 40, height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                     color: Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(inv.invoiceNo,
-                      style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold)),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: inv.balanceAmount == 0
-                            ? Colors.green.shade100
-                            : Colors.orange.shade100,
-                        borderRadius:
-                            BorderRadius.circular(8)),
-                    child: Text(
-                      inv.balanceAmount == 0
-                          ? 'PAID'
-                          : 'PENDING',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: inv.balanceAmount == 0
-                              ? Colors.green.shade700
-                              : Colors.orange.shade700),
-                    ),
-                  ),
-                ]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text(inv.invoiceNo,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: inv.balanceAmount == 0
+                        ? Colors.green.shade100
+                        : Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(8)),
+                child: Text(
+                  inv.balanceAmount == 0 ? l.paidStatus : l.pendingStatus,
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: inv.balanceAmount == 0
+                          ? Colors.green.shade700
+                          : Colors.orange.shade700),
+                ),
+              ),
+            ]),
             const SizedBox(height: 4),
             Text(inv.customerName,
-                style: const TextStyle(
-                    fontSize: 15, color: Colors.grey)),
-            Text(
-                fmt.format(
-                    DateTime.fromMillisecondsSinceEpoch(
-                        inv.invoiceDate)),
-                style: const TextStyle(
-                    fontSize: 13, color: Colors.grey)),
+                style: const TextStyle(fontSize: 15, color: Colors.grey)),
+            Text(fmt.format(DateTime.fromMillisecondsSinceEpoch(inv.invoiceDate)),
+                style: const TextStyle(fontSize: 13, color: Colors.grey)),
             const Divider(height: 24),
-            const Text('Items',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14)),
+            Text(l.items,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             const SizedBox(height: 8),
-            if (snap.connectionState ==
-                ConnectionState.waiting)
-              const Center(
-                  child: CircularProgressIndicator())
+            if (snap.connectionState == ConnectionState.waiting)
+              const Center(child: CircularProgressIndicator())
             else
-              ...lines.map((l) => Padding(
-                    padding:
-                        const EdgeInsets.symmetric(
-                            vertical: 4),
-                    child: Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                            child: Text(
-                                '${l.itemNameSnapshot} × ${l.qty} ${l.unit}',
-                                style: const TextStyle(
-                                    fontSize: 13))),
-                        Text(
-                            'Rs.${l.lineSubtotal.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                                fontSize: 13)),
-                      ],
-                    ),
+              ...lines.map((ln) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Expanded(
+                          child: Text(
+                              '${ln.itemNameSnapshot} × ${ln.qty} ${ln.unit}',
+                              style: const TextStyle(fontSize: 13))),
+                      Text('Rs.${ln.lineSubtotal.toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 13)),
+                    ]),
                   )),
             const Divider(height: 20),
-            _row('Subtotal', inv.subtotal),
+            _row(l.subtotal, inv.subtotal),
             if (inv.discountAmount > 0)
-              _row('Discount', -inv.discountAmount,
-                  color: Colors.orange),
-            if (inv.gstAmount > 0)
-              _row('GST', inv.gstAmount),
+              _row(l.discountLabel, -inv.discountAmount, color: Colors.orange),
+            if (inv.gstAmount > 0) _row(l.gst, inv.gstAmount),
             const Divider(height: 8),
-            _row('TOTAL', inv.total,
-                bold: true, fontSize: 16),
-            if (inv.paidAmount > 0)
-              _row('Paid', inv.paidAmount,
-                  color: Colors.green),
+            _row(l.totalLabel, inv.total, bold: true, fontSize: 16),
+            if (inv.paidAmount > 0) _row(l.paidLabel, inv.paidAmount, color: Colors.green),
             if (inv.balanceAmount > 0)
-              _row('Balance Due', inv.balanceAmount,
-                  color: Colors.red, bold: true),
+              _row(l.balanceDueLabel, inv.balanceAmount, color: Colors.red, bold: true),
             const SizedBox(height: 20),
-            // WhatsApp share button — properly opens WhatsApp
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.chat),
-                label: const Text('Share via WhatsApp'),
+                label: Text(l.shareViaWhatsApp),
                 style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xFF25D366),
+                    backgroundColor: const Color(0xFF25D366),
                     foregroundColor: Colors.white),
-                onPressed: () =>
-                    _shareOnWhatsApp(context, lines),
+                onPressed: () => _shareOnWhatsApp(context, lines),
               ),
             ),
             const SizedBox(height: 8),
-            // PDF Print/Share button
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.picture_as_pdf,
-                    color: Colors.red),
-                label: const Text('View / Print PDF'),
-                onPressed: () =>
-                    _viewPdf(context, lines),
+                icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                label: Text(l.viewPrintPdf),
+                onPressed: () => _viewPdf(context, lines),
               ),
             ),
           ],
@@ -363,9 +294,7 @@ class _InvoiceDetailSheet extends StatelessWidget {
 
   String _buildInvoiceText(List<InvoiceLine> lines) {
     final fmt2 = DateFormat('dd/MM/yyyy');
-    final date = fmt2.format(
-        DateTime.fromMillisecondsSinceEpoch(
-            inv.invoiceDate));
+    final date = fmt2.format(DateTime.fromMillisecondsSinceEpoch(inv.invoiceDate));
     final sb = StringBuffer();
     sb.writeln('🧾 *ARTHAFLOW INVOICE*');
     sb.writeln('━━━━━━━━━━━━━━━━━━━━');
@@ -381,18 +310,12 @@ class _InvoiceDetailSheet extends StatelessWidget {
     }
     sb.writeln('━━━━━━━━━━━━━━━━━━━━');
     if (inv.discountAmount > 0) {
-      sb.writeln(
-          'Discount: -Rs.${inv.discountAmount.toStringAsFixed(0)}');
+      sb.writeln('Discount: -Rs.${inv.discountAmount.toStringAsFixed(0)}');
     }
-    if (inv.gstAmount > 0) {
-      sb.writeln(
-          'GST: Rs.${inv.gstAmount.toStringAsFixed(0)}');
-    }
-    sb.writeln(
-        '💰 *Total: Rs.${inv.total.toStringAsFixed(0)}*');
+    if (inv.gstAmount > 0) sb.writeln('GST: Rs.${inv.gstAmount.toStringAsFixed(0)}');
+    sb.writeln('💰 *Total: Rs.${inv.total.toStringAsFixed(0)}*');
     if (inv.balanceAmount > 0) {
-      sb.writeln(
-          '⚠️ *Balance Due: Rs.${inv.balanceAmount.toStringAsFixed(0)}*');
+      sb.writeln('⚠️ *Balance Due: Rs.${inv.balanceAmount.toStringAsFixed(0)}*');
     } else {
       sb.writeln('✅ *Status: FULLY PAID*');
     }
@@ -401,93 +324,55 @@ class _InvoiceDetailSheet extends StatelessWidget {
     return sb.toString();
   }
 
-  Future<void> _viewPdf(BuildContext context,
-      List<InvoiceLine> lines) async {
+  Future<void> _viewPdf(BuildContext context, List<InvoiceLine> lines) async {
     final db = context.read<AppDatabase>();
-    // Load shop info
     final shopInfo = <String, String>{};
-    for (final key in [
-      'shop_name', 'shop_address', 'shop_phone',
-      'shop_gstin', 'shop_upi'
-    ]) {
+    for (final key in ['shop_name', 'shop_address', 'shop_phone', 'shop_gstin', 'shop_upi']) {
       shopInfo[key] = await db.getSetting(key) ?? '';
     }
     if (!context.mounted) return;
     await Printing.layoutPdf(
       name: inv.invoiceNo,
       onLayout: (_) => InvoicePdfGenerator.generate(
-        inv: inv,
-        lines: lines,
-        shopInfo: shopInfo,
-      ),
+          inv: inv, lines: lines, shopInfo: shopInfo),
     );
   }
 
-  Future<void> _shareOnWhatsApp(
-      BuildContext context, List<InvoiceLine> lines) async {
+  Future<void> _shareOnWhatsApp(BuildContext context, List<InvoiceLine> lines) async {
     final text = _buildInvoiceText(lines);
     final encoded = Uri.encodeComponent(text);
     final url = Uri.parse('whatsapp://send?text=$encoded');
-    final fallbackUrl =
-        Uri.parse('https://wa.me/?text=$encoded');
+    final fallbackUrl = Uri.parse('https://wa.me/?text=$encoded');
     try {
       if (await canLaunchUrl(url)) {
         await launchUrl(url);
       } else {
-        await launchUrl(fallbackUrl,
-            mode: LaunchMode.externalApplication);
+        await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Could not open WhatsApp. Please install WhatsApp and try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not open WhatsApp. Please install WhatsApp and try again.'),
+          backgroundColor: Colors.red,
+        ));
       }
-    }
-  }
-
-  Future<void> _copyInvoiceText(
-      BuildContext context, List<InvoiceLine> lines) async {
-    final text = _buildInvoiceText(lines);
-    await Clipboard.setData(ClipboardData(text: text));
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invoice text copied! Paste in any app.'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
     }
   }
 
   Widget _row(String label, double amt,
-      {bool bold = false,
-      Color? color,
-      double fontSize = 13}) =>
+      {bool bold = false, Color? color, double fontSize = 13}) =>
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-            mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label,
-                  style: TextStyle(
-                      fontSize: fontSize,
-                      fontWeight: bold
-                          ? FontWeight.bold
-                          : FontWeight.normal)),
-              Text('Rs.${amt.abs().toStringAsFixed(2)}',
-                  style: TextStyle(
-                      fontSize: fontSize,
-                      fontWeight: bold
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: color)),
-            ]),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+          Text('Rs.${amt.abs().toStringAsFixed(2)}',
+              style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+                  color: color)),
+        ]),
       );
 }
