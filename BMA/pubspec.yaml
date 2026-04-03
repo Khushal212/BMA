@@ -36,6 +36,13 @@ dependencies:
   # QR Code for UPI
   qr_flutter: ^4.1.0
 
+  # Image picker for custom QR upload
+  image_picker: ^1.0.4
+
+  # Contacts import
+  permission_handler: ^11.0.1
+  contacts_service: ^0.6.3
+
   # Material / Fonts
   google_fonts: ^6.1.0
 
