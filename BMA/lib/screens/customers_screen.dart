@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../database/app_database.dart';
 import 'customer_detail_screen.dart';
 
@@ -9,8 +10,7 @@ class CustomersScreen extends StatefulWidget {
   const CustomersScreen({Key? key}) : super(key: key);
 
   @override
-  State<CustomersScreen> createState() =>
-      _CustomersScreenState();
+  State<CustomersScreen> createState() => _CustomersScreenState();
 }
 
 class _CustomersScreenState extends State<CustomersScreen> {
@@ -32,8 +32,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   Future<void> _loadCustomers() async {
-    final list =
-        await context.read<AppDatabase>().getAllCustomers();
+    final list = await context.read<AppDatabase>().getAllCustomers();
     if (mounted) {
       setState(() {
         _customers = list;
@@ -52,13 +51,22 @@ class _CustomersScreenState extends State<CustomersScreen> {
         .toList();
   }
 
-  // ── Validators ─────────────────────────────────────────────
+  Future<void> _callCustomer(String phone) async {
+    final url = Uri.parse('tel:+91$phone');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch dialer')));
+      }
+    }
+  }
+
   String? _validateName(String? v) {
     if (v == null || v.trim().isEmpty) return 'Name is required';
     if (v.trim().length < 2) return 'Name must be at least 2 characters';
     if (v.trim().length > 50) return 'Name too long (max 50 chars)';
-    final nameRegex = RegExp(r"^[a-zA-Z\u0900-\u097F\u0A80-\u0AFF\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F\s.'-]+$");
-    if (!nameRegex.hasMatch(v.trim())) return 'Name contains invalid characters';
     return null;
   }
 
@@ -66,7 +74,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
     if (v == null || v.trim().isEmpty) return 'Phone is required';
     final digits = v.replaceAll(RegExp(r'\D'), '');
     if (digits.length != 10) return 'Enter valid 10-digit mobile number';
-    if (!RegExp(r'^[6-9]').hasMatch(digits)) return 'Mobile must start with 6, 7, 8, or 9';
+    if (!RegExp(r'^[6-9]').hasMatch(digits))
+      return 'Mobile must start with 6, 7, 8, or 9';
     return null;
   }
 
@@ -87,8 +96,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final addrCtrl =
         TextEditingController(text: existing?.address ?? '');
     final limitCtrl = TextEditingController(
-        text: (existing?.creditLimit ?? 10000)
-            .toStringAsFixed(0));
+        text: (existing?.creditLimit ?? 10000).toStringAsFixed(0));
     final formKey = GlobalKey<FormState>();
 
     final result = await showDialog<bool>(
@@ -110,8 +118,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.person),
                   ),
-                  textCapitalization:
-                      TextCapitalization.words,
+                  textCapitalization: TextCapitalization.words,
                   validator: _validateName,
                   autovalidateMode:
                       AutovalidateMode.onUserInteraction,
@@ -194,20 +201,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
         address: addrCtrl.text.trim().isEmpty
             ? null
             : addrCtrl.text.trim(),
-        creditLimit:
-            double.parse(limitCtrl.text.trim()),
+        creditLimit: double.parse(limitCtrl.text.trim()),
       );
     } else {
-        await db.updateCustomer(Customer(
-          id: existing.id,
-          name: nameCtrl.text.trim(),
-          phone: phoneCtrl.text.trim(),
-          address: addrCtrl.text.trim().isEmpty ? null : addrCtrl.text.trim(),
-          creditLimit: double.parse(limitCtrl.text.trim()),
-          defaultPricePercent: existing.defaultPricePercent,
-          defaultGstPercent: existing.defaultGstPercent,
-          createdAt: existing.createdAt,
-        ));
+      await db.updateCustomer(Customer(
+        id: existing.id,
+        name: nameCtrl.text.trim(),
+        phone: phoneCtrl.text.trim(),
+        address: addrCtrl.text.trim().isEmpty
+            ? null
+            : addrCtrl.text.trim(),
+        creditLimit: double.parse(limitCtrl.text.trim()),
+        defaultPricePercent: existing.defaultPricePercent,
+        defaultGstPercent: existing.defaultGstPercent,
+        createdAt: existing.createdAt,
+      ));
     }
     _loadCustomers();
   }
@@ -224,8 +232,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),
@@ -279,14 +287,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
                       )
                     : null,
               ),
-              onChanged: (v) =>
-                  setState(() => _query = v),
+              onChanged: (v) => setState(() => _query = v),
             ),
           ),
           Expanded(
             child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : _filtered.isEmpty
                     ? Center(
                         child: Column(
@@ -302,8 +308,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   : 'No results for "$_query"',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  color:
-                                      Colors.grey.shade500),
+                                  color: Colors.grey.shade500),
                             ),
                           ],
                         ),
@@ -319,8 +324,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                             return FutureBuilder<double>(
                               future: context
                                   .read<AppDatabase>()
-                                  .getCustomerOutstanding(
-                                      c.id),
+                                  .getCustomerOutstanding(c.id),
                               builder: (ctx, snap) {
                                 final out = snap.data ?? 0;
                                 final exceeded =
@@ -329,15 +333,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   leading: CircleAvatar(
                                     backgroundColor: exceeded
                                         ? Colors.red.shade100
-                                        : Colors
-                                            .green.shade100,
+                                        : Colors.green.shade100,
                                     child: Text(
                                       c.name[0].toUpperCase(),
                                       style: TextStyle(
                                           color: exceeded
                                               ? Colors.red
-                                              : Colors.green
-                                                  .shade700,
+                                              : Colors.green.shade700,
                                           fontWeight:
                                               FontWeight.bold),
                                     ),
@@ -346,28 +348,61 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                       style: const TextStyle(
                                           fontWeight:
                                               FontWeight.w600)),
-                                  subtitle: Text('+91 ${c.phone}'),
-                                  trailing: Column(
-                                    mainAxisSize:
-                                        MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.end,
+                                  subtitle:
+                                      Text('+91 ${c.phone}'),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(
-                                        'Rs.${out.toStringAsFixed(0)}',
-                                        style: TextStyle(
-                                            color: exceeded
-                                                ? Colors.red
-                                                : Colors.green
-                                                    .shade700,
-                                            fontWeight:
-                                                FontWeight.bold),
+                                      Column(
+                                        mainAxisSize:
+                                            MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            'Rs.${out.toStringAsFixed(0)}',
+                                            style: TextStyle(
+                                                color: exceeded
+                                                    ? Colors.red
+                                                    : Colors.green
+                                                        .shade700,
+                                                fontWeight:
+                                                    FontWeight.bold),
+                                          ),
+                                          Text(
+                                            'Limit: Rs.${c.creditLimit.toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey),
+                                          ),
+                                        ],
                                       ),
-                                      Text(
-                                        'Limit: Rs.${c.creditLimit.toStringAsFixed(0)}',
-                                        style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey),
+                                      const SizedBox(width: 4),
+                                      // Call button
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.call,
+                                            size: 18,
+                                            color: Colors.green),
+                                        onPressed: () =>
+                                            _callCustomer(c.phone),
+                                        padding: EdgeInsets.zero,
+                                        constraints:
+                                            const BoxConstraints(),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      // Edit button
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.edit,
+                                            size: 18,
+                                            color: Colors.blue),
+                                        onPressed: () =>
+                                            _showAddEditDialog(
+                                                existing: c),
+                                        padding: EdgeInsets.zero,
+                                        constraints:
+                                            const BoxConstraints(),
                                       ),
                                     ],
                                   ),
@@ -377,8 +412,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             CustomerDetailScreen(
-                                                customerId:
-                                                    c.id),
+                                                customerId: c.id),
                                       ),
                                     );
                                     _loadCustomers();
