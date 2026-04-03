@@ -141,7 +141,7 @@ class _StockScreenState extends State<StockScreen> {
     _load();
   }
 
-  Future<void> _updateAlertDialog(Item item) async {
+Future<void> _updateAlertDialog(Item item) async {
     final alertCtrl = TextEditingController(
         text: item.lowStockAlert.toStringAsFixed(0));
     final result = await showDialog<bool>(
@@ -171,10 +171,10 @@ class _StockScreenState extends State<StockScreen> {
       ),
     );
     if (result != true) return;
-    await context.read<AppDatabase>().updateItem(ItemsCompanion(
-    id: Value(item.id),
-    lowStockAlert: Value(double.parse(alertCtrl.text.trim())),
-      ));
+    await context.read<AppDatabase>().updateItem(
+      ItemsCompanion(
+        id: Value(item.id),
+        lowStockAlert: Value(double.parse(alertCtrl.text.trim())),
       ),
     );
     _load();
