@@ -6,7 +6,6 @@ import '../main.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
-
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -23,20 +22,16 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     _headerCtrl = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 700));
+        vsync: this, duration: const Duration(milliseconds: 700));
     _cardsCtrl = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 800));
-
-    _headerAnim = CurvedAnimation(
-        parent: _headerCtrl, curve: Curves.easeOut);
-    _cardsAnim = CurvedAnimation(
-        parent: _cardsCtrl, curve: Curves.easeOut);
-
+        vsync: this, duration: const Duration(milliseconds: 800));
+    _headerAnim =
+        CurvedAnimation(parent: _headerCtrl, curve: Curves.easeOut);
+    _cardsAnim =
+        CurvedAnimation(parent: _cardsCtrl, curve: Curves.easeOut);
     _headerCtrl.forward();
-    Future.delayed(const Duration(milliseconds: 300),
-        () => _cardsCtrl.forward());
+    Future.delayed(
+        const Duration(milliseconds: 300), () => _cardsCtrl.forward());
   }
 
   @override
@@ -51,11 +46,13 @@ class _DashboardScreenState extends State<DashboardScreen>
     final db = context.read<AppDatabase>();
     final fmt = DateFormat('dd MMM yyyy');
     final now = DateTime.now();
+    final l = context.l10n;
+
     final greeting = now.hour < 12
-        ? 'Good Morning'
+        ? l.goodMorning
         : now.hour < 17
-            ? 'Good Afternoon'
-            : 'Good Evening';
+            ? l.goodAfternoon
+            : l.goodEvening;
 
     return Scaffold(
       backgroundColor: AppColors.offWhite,
@@ -64,7 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         onRefresh: () async => setState(() {}),
         child: CustomScrollView(
           slivers: [
-            // ── Animated Header ──────────────────────────────
+            // ── Animated Header ────────────────────────────
             SliverAppBar(
               expandedHeight: 180,
               floating: false,
@@ -110,33 +107,25 @@ class _DashboardScreenState extends State<DashboardScreen>
                             crossAxisAlignment:
                                 CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                greeting,
-                                style: TextStyle(
-                                  color: Colors.white
-                                      .withOpacity(0.7),
-                                  fontSize: 14,
-                                ),
-                              ),
+                              Text(greeting,
+                                  style: TextStyle(
+                                      color: Colors.white
+                                          .withOpacity(0.7),
+                                      fontSize: 14)),
                               const SizedBox(height: 4),
-                              const Text(
-                                'VyapaarX',
-                                style: TextStyle(
-                                  color: AppColors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
-                                ),
-                              ),
+                              Text(l.appTitle,
+                                  style: const TextStyle(
+                                      color: AppColors.white,
+                                      fontSize: 26,
+                                      fontWeight:
+                                          FontWeight.bold,
+                                      letterSpacing: 1)),
                               const SizedBox(height: 4),
-                              Text(
-                                fmt.format(now),
-                                style: TextStyle(
-                                  color: AppColors.gold
-                                      .withOpacity(0.9),
-                                  fontSize: 13,
-                                ),
-                              ),
+                              Text(fmt.format(now),
+                                  style: TextStyle(
+                                      color: AppColors.gold
+                                          .withOpacity(0.9),
+                                      fontSize: 13)),
                             ],
                           ),
                         ),
@@ -164,14 +153,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                     crossAxisAlignment:
                         CrossAxisAlignment.start,
                     children: [
-                      // ── Stat Cards ────────────────────────
+                      // ── Stat Cards ──────────────────────
                       Row(children: [
                         Expanded(
                           child: FutureBuilder<double>(
                             future: db.getTodaysSalesTotal(),
                             builder: (ctx, snap) =>
                                 _AnimatedStatCard(
-                              label: "Today's Sales",
+                              label: l.todaysSales,
                               value:
                                   'Rs.${(snap.data ?? 0).toStringAsFixed(0)}',
                               icon: Icons.trending_up,
@@ -191,16 +180,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                             future: db.getTotalOutstanding(),
                             builder: (ctx, snap) =>
                                 _AnimatedStatCard(
-                              label: 'Outstanding',
+                              label: l.totalOutstanding,
                               value:
                                   'Rs.${(snap.data ?? 0).toStringAsFixed(0)}',
-                              icon: Icons.account_balance_wallet,
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColors.gold.withOpacity(0.8),
-                                  AppColors.gold,
-                                ],
-                              ),
+                              icon: Icons
+                                  .account_balance_wallet,
+                              gradient: LinearGradient(colors: [
+                                AppColors.gold.withOpacity(0.8),
+                                AppColors.gold,
+                              ]),
                               delay: 100,
                             ),
                           ),
@@ -209,9 +197,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       const SizedBox(height: 20),
 
-                      // ── Quick Actions ─────────────────────
-                      const Text('Quick Actions',
-                          style: TextStyle(
+                      // ── Quick Actions ────────────────────
+                      Text(l.quickActions,
+                          style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: AppColors.navy)),
@@ -222,44 +210,48 @@ class _DashboardScreenState extends State<DashboardScreen>
                         children: [
                           _QuickAction(
                             icon: Icons.receipt_long,
-                            label: 'New\nInvoice',
+                            label: l.newInvoice,
                             color: AppColors.navy,
-                            onTap: () => MainNavigation.jumpTo(
-                                context, 3),
+                            onTap: () =>
+                                MainNavigation.jumpTo(
+                                    context, 3),
                           ),
                           _QuickAction(
                             icon: Icons.people,
-                            label: 'Customers',
+                            label: l.customers,
                             color: AppColors.accent,
-                            onTap: () => MainNavigation.jumpTo(
-                                context, 1),
+                            onTap: () =>
+                                MainNavigation.jumpTo(
+                                    context, 1),
                           ),
                           _QuickAction(
                             icon: Icons.inventory_2,
-                            label: 'Items',
+                            label: l.items,
                             color: AppColors.gold,
-                            onTap: () => MainNavigation.jumpTo(
-                                context, 2),
+                            onTap: () =>
+                                MainNavigation.jumpTo(
+                                    context, 2),
                           ),
                           _QuickAction(
                             icon: Icons.history,
-                            label: 'History',
+                            label: l.history,
                             color: Colors.purple,
-                            onTap: () => MainNavigation.jumpTo(
-                                context, 4),
+                            onTap: () =>
+                                MainNavigation.jumpTo(
+                                    context, 4),
                           ),
                         ],
                       ),
 
                       const SizedBox(height: 20),
 
-                      // ── Daily Sales Report ─────────────────
+                      // ── Daily Sales Report ───────────────
                       Row(
                         mainAxisAlignment:
                             MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Daily Sales Report',
-                              style: TextStyle(
+                          Text(l.dailySalesReport,
+                              style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: AppColors.navy)),
@@ -286,15 +278,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     colorScheme:
                                         const ColorScheme.light(
                                       primary: AppColors.navy,
-                                      onPrimary: AppColors.white,
+                                      onPrimary:
+                                          AppColors.white,
                                     ),
                                   ),
                                   child: child!,
                                 ),
                               );
                               if (picked != null) {
-                                setState(
-                                    () => _selectedDate = picked);
+                                setState(() =>
+                                    _selectedDate = picked);
                               }
                             },
                           ),
@@ -303,7 +296,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                       const SizedBox(height: 8),
 
                       FutureBuilder<DailySummary>(
-                        future: db.getDailySummary(_selectedDate),
+                        future:
+                            db.getDailySummary(_selectedDate),
                         builder: (ctx, snap) {
                           if (!snap.hasData) {
                             return const Center(
@@ -313,23 +307,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                           }
                           final s = snap.data!;
                           return Column(children: [
-                            // Mini summary
                             Row(children: [
                               Expanded(
                                   child: _MiniCard(
-                                      'Total Sales',
+                                      l.totalSales,
                                       'Rs.${s.totalSales.toStringAsFixed(0)}',
                                       AppColors.navy)),
                               const SizedBox(width: 8),
                               Expanded(
                                   child: _MiniCard(
-                                      'Collected',
+                                      l.collected,
                                       'Rs.${s.collected.toStringAsFixed(0)}',
                                       AppColors.accent)),
                               const SizedBox(width: 8),
                               Expanded(
                                   child: _MiniCard(
-                                      'Pending',
+                                      l.pending,
                                       'Rs.${s.pending.toStringAsFixed(0)}',
                                       AppColors.danger)),
                             ]),
@@ -349,7 +342,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                               .grey.shade300),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'No sales on ${fmt.format(_selectedDate)}',
+                                        l.noSalesOnDate,
                                         style: const TextStyle(
                                             color: Colors.grey),
                                       ),
@@ -389,7 +382,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                               Text(
                                                   inv.invoiceNo,
                                                   style: const TextStyle(
-                                                      fontSize: 12,
+                                                      fontSize:
+                                                          12,
                                                       color: Colors
                                                           .grey)),
                                             ],
@@ -397,7 +391,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                           const SizedBox(
                                               height: 6),
                                           ...inv.lines.map(
-                                              (l) => Padding(
+                                              (ln) => Padding(
                                                     padding: const EdgeInsets
                                                         .symmetric(
                                                         vertical:
@@ -408,12 +402,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                               .spaceBetween,
                                                       children: [
                                                         Text(
-                                                            '${l.itemNameSnapshot} × ${l.qty} ${l.unit}',
+                                                            '${ln.itemNameSnapshot} × ${ln.qty} ${ln.unit}',
                                                             style: const TextStyle(
                                                                 fontSize:
                                                                     13)),
                                                         Text(
-                                                            'Rs.${l.lineTotal.toStringAsFixed(0)}',
+                                                            'Rs.${ln.lineTotal.toStringAsFixed(0)}',
                                                             style: const TextStyle(
                                                                 fontSize:
                                                                     13)),
@@ -428,7 +422,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                     .spaceBetween,
                                             children: [
                                               Text(
-                                                  'Total: Rs.${inv.total.toStringAsFixed(0)}',
+                                                  '${l.total}: Rs.${inv.total.toStringAsFixed(0)}',
                                                   style: const TextStyle(
                                                       fontWeight:
                                                           FontWeight
@@ -460,8 +454,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 child: Text(
                                                   inv.balanceAmount ==
                                                           0
-                                                      ? 'PAID'
-                                                      : 'Due: Rs.${inv.balanceAmount.toStringAsFixed(0)}',
+                                                      ? l.paidStatus
+                                                      : '${l.due}: Rs.${inv.balanceAmount.toStringAsFixed(0)}',
                                                   style: TextStyle(
                                                     fontSize: 11,
                                                     color: inv.balanceAmount ==
@@ -488,7 +482,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       const SizedBox(height: 16),
 
-                      // ── Credit Alerts ──────────────────────
+                      // ── Credit Alerts ────────────────────
                       FutureBuilder<List<Customer>>(
                         future:
                             db.getExceededCreditLimitCustomers(),
@@ -501,12 +495,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 CrossAxisAlignment.start,
                             children: [
                               Row(children: [
-                                const Icon(Icons.warning_amber,
+                                const Icon(
+                                    Icons.warning_amber,
                                     color: AppColors.danger,
                                     size: 20),
                                 const SizedBox(width: 8),
                                 Text(
-                                  '${exceeded.length} Customer(s) Exceeded Credit Limit',
+                                  '${exceeded.length} ${l.creditLimitExceeded}',
                                   style: const TextStyle(
                                       color: AppColors.danger,
                                       fontWeight:
@@ -526,17 +521,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                                       return Card(
                                         color: AppColors.danger
                                             .withOpacity(0.08),
-                                        shape:
-                                            RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius
-                                                  .circular(12),
-                                          side: BorderSide(
-                                              color: AppColors
-                                                  .danger
-                                                  .withOpacity(
-                                                      0.3)),
-                                        ),
                                         margin:
                                             const EdgeInsets.only(
                                                 bottom: 6),
@@ -561,10 +545,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                     c.name[0]
                                                         .toUpperCase(),
                                                     style: const TextStyle(
-                                                        color:
-                                                            AppColors.danger,
+                                                        color: AppColors
+                                                            .danger,
                                                         fontWeight:
-                                                            FontWeight.bold),
+                                                            FontWeight
+                                                                .bold),
                                                   ),
                                                 ),
                                                 const SizedBox(
@@ -572,14 +557,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 Text(c.name,
                                                     style: const TextStyle(
                                                         fontWeight:
-                                                            FontWeight.bold)),
+                                                            FontWeight
+                                                                .bold)),
                                               ]),
                                               Text(
                                                 'Rs.${out.toStringAsFixed(0)} / Rs.${c.creditLimit.toStringAsFixed(0)}',
                                                 style: const TextStyle(
                                                     color:
-                                                        AppColors.danger,
-                                                    fontSize: 12),
+                                                        AppColors
+                                                            .danger,
+                                                    fontSize:
+                                                        12),
                                               ),
                                             ],
                                           ),
@@ -604,21 +592,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 }
 
-// ── Animated Stat Card ─────────────────────────────────────────
 class _AnimatedStatCard extends StatefulWidget {
   final String label, value;
   final IconData icon;
   final Gradient gradient;
   final int delay;
-
-  const _AnimatedStatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.gradient,
-    required this.delay,
-  });
-
+  const _AnimatedStatCard(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      required this.gradient,
+      required this.delay});
   @override
   State<_AnimatedStatCard> createState() =>
       _AnimatedStatCardState();
@@ -628,7 +612,6 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _scale;
-
   @override
   void initState() {
     super.initState();
@@ -657,10 +640,9 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4))
             ],
           ),
           child: Column(
@@ -689,14 +671,11 @@ class _QuickAction extends StatefulWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
+  const _QuickAction(
+      {required this.icon,
+      required this.label,
+      required this.color,
+      required this.onTap});
   @override
   State<_QuickAction> createState() => _QuickActionState();
 }
@@ -704,8 +683,6 @@ class _QuickAction extends StatefulWidget {
 class _QuickActionState extends State<_QuickAction>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double> _scale;
-
   @override
   void initState() {
     super.initState();
@@ -715,7 +692,6 @@ class _QuickActionState extends State<_QuickAction>
         lowerBound: 0.9,
         upperBound: 1.0)
       ..value = 1.0;
-    _scale = _ctrl;
   }
 
   @override
@@ -733,7 +709,7 @@ class _QuickActionState extends State<_QuickAction>
         },
         onTapCancel: () => _ctrl.forward(),
         child: ScaleTransition(
-          scale: _scale,
+          scale: _ctrl,
           child: Column(children: [
             Container(
               padding: const EdgeInsets.all(14),
@@ -744,10 +720,9 @@ class _QuickActionState extends State<_QuickAction>
                     color: widget.color.withOpacity(0.2)),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.color.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
+                      color: widget.color.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3))
                 ],
               ),
               child: Icon(widget.icon,
@@ -768,7 +743,6 @@ class _MiniCard extends StatelessWidget {
   final String label, value;
   final Color color;
   const _MiniCard(this.label, this.value, this.color);
-
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(
@@ -776,8 +750,8 @@ class _MiniCard extends StatelessWidget {
         decoration: BoxDecoration(
             color: color.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: color.withOpacity(0.2))),
+            border:
+                Border.all(color: color.withOpacity(0.2))),
         child: Column(children: [
           Text(label,
               style: TextStyle(
