@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../database/app_database.dart';
+import 'package:drift/drift.dart' show Value;
 
 class NewInvoiceScreen extends StatefulWidget {
   const NewInvoiceScreen({Key? key}) : super(key: key);
