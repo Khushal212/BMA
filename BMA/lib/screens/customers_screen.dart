@@ -1,54 +1,50 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../database/app_database.dart';
-import 'customer_detail_screen.dart';
 
-class CustomersScreen extends StatefulWidget {
-  const CustomersScreen({Key? key}) : super(key: key);
+class CustomerDetailScreen extends StatefulWidget {
+  final String customerId;
+  const CustomerDetailScreen({Key? key, required this.customerId})
+      : super(key: key);
 
   @override
-  State<CustomersScreen> createState() => _CustomersScreenState();
+  State<CustomerDetailScreen> createState() =>
+      _CustomerDetailScreenState();
 }
 
-class _CustomersScreenState extends State<CustomersScreen> {
-  final _searchController = TextEditingController();
-  String _query = '';
-  List<Customer> _customers = [];
+class _CustomerDetailScreenState
+    extends State<CustomerDetailScreen> {
+  Customer? _customer;
+  List<Invoice> _invoices = [];
+  List<Payment> _payments = [];
+  double _outstanding = 0;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadCustomers();
+    _loadAll();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadCustomers() async {
-    final list = await context.read<AppDatabase>().getAllCustomers();
+  Future<void> _loadAll() async {
+    final db = context.read<AppDatabase>();
+    final customer = await db.getCustomer(widget.customerId);
+    final invoices = await db.getCustomerInvoices(widget.customerId);
+    final payments = await db.getCustomerPayments(widget.customerId);
+    final outstanding =
+        await db.getCustomerOutstanding(widget.customerId);
     if (mounted) {
       setState(() {
-        _customers = list;
+        _customer = customer;
+        _invoices = invoices;
+        _payments = payments;
+        _outstanding = outstanding;
         _loading = false;
       });
     }
-  }
-
-  List<Customer> get _filtered {
-    final q = _query.trim().toLowerCase();
-    if (q.isEmpty) return _customers;
-    return _customers
-        .where((c) =>
-            c.name.toLowerCase().contains(q) ||
-            c.phone.toLowerCase().contains(q))
-        .toList();
   }
 
   Future<void> _callCustomer(String phone) async {
@@ -63,371 +59,393 @@ class _CustomersScreenState extends State<CustomersScreen> {
     }
   }
 
-  String? _validateName(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Name is required';
-    if (v.trim().length < 2) return 'Name must be at least 2 characters';
-    if (v.trim().length > 50) return 'Name too long (max 50 chars)';
-    return null;
-  }
-
-  String? _validatePhone(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Phone is required';
-    final digits = v.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 10) return 'Enter valid 10-digit mobile number';
-    if (!RegExp(r'^[6-9]').hasMatch(digits))
-      return 'Mobile must start with 6, 7, 8, or 9';
-    return null;
-  }
-
-  String? _validateCreditLimit(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Credit limit required';
-    final amount = double.tryParse(v.trim());
-    if (amount == null) return 'Enter a valid number';
-    if (amount < 0) return 'Cannot be negative';
-    if (amount > 10000000) return 'Limit too high';
-    return null;
-  }
-
-  Future<void> _showAddEditDialog({Customer? existing}) async {
-    final nameCtrl =
-        TextEditingController(text: existing?.name ?? '');
-    final phoneCtrl =
-        TextEditingController(text: existing?.phone ?? '');
-    final addrCtrl =
-        TextEditingController(text: existing?.address ?? '');
-    final limitCtrl = TextEditingController(
-        text: (existing?.creditLimit ?? 10000).toStringAsFixed(0));
+  Future<void> _recordPayment(
+      {String? invoiceId, double? maxAmount}) async {
+    final amtCtrl = TextEditingController(
+        text: maxAmount?.toStringAsFixed(0) ?? '');
+    final refCtrl = TextEditingController();
+    String mode = 'CASH';
     final formKey = GlobalKey<FormState>();
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-            existing == null ? 'Add Customer' : 'Edit Customer'),
-        content: Form(
-          key: formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name *',
-                    hintText: 'e.g. Ramesh Kumar',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
+      builder: (ctx) =>
+          StatefulBuilder(builder: (ctx, setDlg) {
+        return AlertDialog(
+          title: Text(invoiceId != null
+              ? 'Partial Payment for Invoice'
+              : 'Record Payment'),
+          content: Form(
+            key: formKey,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              if (invoiceId != null)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  textCapitalization: TextCapitalization.words,
-                  validator: _validateName,
-                  autovalidateMode:
-                      AutovalidateMode.onUserInteraction,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: phoneCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Mobile Number *',
-                    hintText: '10-digit mobile number',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.phone),
-                    prefixText: '+91 ',
+                  child: Text(
+                    'Max payable: Rs.${maxAmount?.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.blue),
                   ),
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
-                  ],
-                  validator: _validatePhone,
-                  autovalidateMode:
-                      AutovalidateMode.onUserInteraction,
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: addrCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Address',
-                    hintText: 'Optional',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_on),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: limitCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Credit Limit (Rs.) *',
-                    hintText: 'e.g. 10000',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.credit_card),
-                    prefixText: 'Rs. ',
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
-                  validator: _validateCreditLimit,
-                  autovalidateMode:
-                      AutovalidateMode.onUserInteraction,
-                ),
-              ],
-            ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: amtCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Amount (Rs.) *',
+                    border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty)
+                    return 'Required';
+                  final amt = double.tryParse(v);
+                  if (amt == null || amt <= 0)
+                    return 'Invalid amount';
+                  if (maxAmount != null && amt > maxAmount) {
+                    return 'Cannot exceed Rs.${maxAmount.toStringAsFixed(0)}';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: mode,
+                decoration: const InputDecoration(
+                    labelText: 'Mode',
+                    border: OutlineInputBorder()),
+                items: ['CASH', 'UPI', 'BANK']
+                    .map((m) => DropdownMenuItem(
+                        value: m, child: Text(m)))
+                    .toList(),
+                onChanged: (v) => setDlg(() => mode = v!),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: refCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Reference (optional)',
+                    border: OutlineInputBorder()),
+              ),
+            ]),
           ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  Navigator.pop(ctx, true);
-                }
-              },
-              child: const Text('Save')),
-        ],
-      ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    Navigator.pop(ctx, true);
+                  }
+                },
+                child: const Text('Record')),
+          ],
+        );
+      }),
     );
 
     if (result != true) return;
-
     final db = context.read<AppDatabase>();
-    if (existing == null) {
-      await db.createCustomer(
+    final amount = double.parse(amtCtrl.text.trim());
+
+    if (invoiceId != null) {
+      await db.recordPartialPayment(
         id: const Uuid().v4(),
-        name: nameCtrl.text.trim(),
-        phone: phoneCtrl.text.trim(),
-        address: addrCtrl.text.trim().isEmpty
+        customerId: widget.customerId,
+        invoiceId: invoiceId,
+        amount: amount,
+        mode: mode,
+        reference: refCtrl.text.trim().isEmpty
             ? null
-            : addrCtrl.text.trim(),
-        creditLimit: double.parse(limitCtrl.text.trim()),
+            : refCtrl.text.trim(),
       );
     } else {
-      await db.updateCustomer(Customer(
-        id: existing.id,
-        name: nameCtrl.text.trim(),
-        phone: phoneCtrl.text.trim(),
-        address: addrCtrl.text.trim().isEmpty
+      await db.recordPayment(
+        id: const Uuid().v4(),
+        customerId: widget.customerId,
+        amount: amount,
+        mode: mode,
+        reference: refCtrl.text.trim().isEmpty
             ? null
-            : addrCtrl.text.trim(),
-        creditLimit: double.parse(limitCtrl.text.trim()),
-        defaultPricePercent: existing.defaultPricePercent,
-        defaultGstPercent: existing.defaultGstPercent,
-        createdAt: existing.createdAt,
-      ));
+            : refCtrl.text.trim(),
+      );
     }
-    _loadCustomers();
-  }
 
-  Future<void> _deleteCustomer(Customer c) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Customer?'),
-        content: Text(
-            'Delete "${c.name}"? All invoices and payments for this customer will also be affected.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-    await context.read<AppDatabase>().deleteCustomer(c.id);
-    _loadCustomers();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Payment recorded ✓'),
+              backgroundColor: Colors.green));
+    }
+    _loadAll();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+          body: Center(child: CircularProgressIndicator()));
+    }
+    if (_customer == null) {
+      return const Scaffold(
+          body: Center(child: Text('Customer not found')));
+    }
+
+    final c = _customer!;
+    final exceeded = _outstanding > c.creditLimit;
+    final fmt = DateFormat('dd MMM yyyy');
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Customers'),
+        title: Text(c.name),
         centerTitle: true,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Center(
-              child: Text('${_customers.length}',
-                  style: TextStyle(
-                      color: Colors.green.shade700,
-                      fontWeight: FontWeight.bold)),
-            ),
+          // Call button in AppBar
+          IconButton(
+            icon: const Icon(Icons.call, color: Colors.green),
+            tooltip: 'Call ${c.name}',
+            onPressed: () => _callCustomer(c.phone),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditDialog(),
-        child: const Icon(Icons.person_add),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search name or phone...',
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
-                suffixIcon: _query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                        },
-                      )
-                    : null,
-              ),
-              onChanged: (v) => setState(() => _query = v),
-            ),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _filtered.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
+      body: RefreshIndicator(
+        onRefresh: _loadAll,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Outstanding card
+            Card(
+              color: exceeded
+                  ? Colors.red.shade50
+                  : Colors.green.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.people_outline,
-                                size: 64,
-                                color: Colors.grey.shade400),
-                            const SizedBox(height: 12),
+                            const Text('Outstanding',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey)),
                             Text(
-                              _customers.isEmpty
-                                  ? 'No customers yet.\nTap + to add one.'
-                                  : 'No results for "$_query"',
-                              textAlign: TextAlign.center,
+                              'Rs.${_outstanding.toStringAsFixed(2)}',
                               style: TextStyle(
-                                  color: Colors.grey.shade500),
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: exceeded
+                                      ? Colors.red
+                                      : Colors.green.shade700),
                             ),
                           ],
                         ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadCustomers,
-                        child: ListView.separated(
-                          itemCount: _filtered.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(height: 1),
-                          itemBuilder: (ctx, idx) {
-                            final c = _filtered[idx];
-                            return FutureBuilder<double>(
-                              future: context
-                                  .read<AppDatabase>()
-                                  .getCustomerOutstanding(c.id),
-                              builder: (ctx, snap) {
-                                final out = snap.data ?? 0;
-                                final exceeded =
-                                    out > c.creditLimit;
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: exceeded
-                                        ? Colors.red.shade100
-                                        : Colors.green.shade100,
-                                    child: Text(
-                                      c.name[0].toUpperCase(),
-                                      style: TextStyle(
-                                          color: exceeded
-                                              ? Colors.red
-                                              : Colors.green.shade700,
-                                          fontWeight:
-                                              FontWeight.bold),
-                                    ),
-                                  ),
-                                  title: Text(c.name,
-                                      style: const TextStyle(
-                                          fontWeight:
-                                              FontWeight.w600)),
-                                  subtitle:
-                                      Text('+91 ${c.phone}'),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Column(
-                                        mainAxisSize:
-                                            MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            'Rs.${out.toStringAsFixed(0)}',
-                                            style: TextStyle(
-                                                color: exceeded
-                                                    ? Colors.red
-                                                    : Colors.green
-                                                        .shade700,
-                                                fontWeight:
-                                                    FontWeight.bold),
-                                          ),
-                                          Text(
-                                            'Limit: Rs.${c.creditLimit.toStringAsFixed(0)}',
-                                            style: const TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.grey),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(width: 4),
-                                      // Call button
-                                      IconButton(
-                                        icon: const Icon(
-                                            Icons.call,
-                                            size: 18,
-                                            color: Colors.green),
-                                        onPressed: () =>
-                                            _callCustomer(c.phone),
-                                        padding: EdgeInsets.zero,
-                                        constraints:
-                                            const BoxConstraints(),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      // Edit button
-                                      IconButton(
-                                        icon: const Icon(
-                                            Icons.edit,
-                                            size: 18,
-                                            color: Colors.blue),
-                                        onPressed: () =>
-                                            _showAddEditDialog(
-                                                existing: c),
-                                        padding: EdgeInsets.zero,
-                                        constraints:
-                                            const BoxConstraints(),
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () async {
-                                    await Navigator.push(
-                                      ctx,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            CustomerDetailScreen(
-                                                customerId: c.id),
-                                      ),
-                                    );
-                                    _loadCustomers();
-                                  },
-                                  onLongPress: () =>
-                                      _showAddEditDialog(
-                                          existing: c),
-                                );
-                              },
-                            );
-                          },
+                        Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.end,
+                          children: [
+                            const Text('Credit Limit',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey)),
+                            Text(
+                              'Rs.${c.creditLimit.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                            if (exceeded)
+                              Text(
+                                'EXCEEDED by Rs.${(_outstanding - c.creditLimit).toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _recordPayment,
+                        icon: const Icon(Icons.payment),
+                        label: const Text('Record Payment'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Contact info
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Contact Info',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14)),
+                    const Divider(),
+                    Row(children: [
+                      const Icon(Icons.phone,
+                          size: 16, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Text('+91 ${c.phone}'),
+                      const Spacer(),
+                      // Call button inline
+                      ElevatedButton.icon(
+                        onPressed: () => _callCustomer(c.phone),
+                        icon: const Icon(Icons.call, size: 16),
+                        label: const Text('Call'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                         ),
                       ),
-          ),
-        ],
+                    ]),
+                    if (c.address != null &&
+                        c.address!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(children: [
+                        const Icon(Icons.location_on,
+                            size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(c.address!)),
+                      ]),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Invoices
+            const Text('Invoices',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            if (_invoices.isEmpty)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No invoices yet',
+                      style: TextStyle(color: Colors.grey)),
+                ),
+              )
+            else
+              ..._invoices.map((inv) => Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      title: Text(inv.invoiceNo,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600)),
+                      subtitle: Text(fmt.format(
+                          DateTime.fromMillisecondsSinceEpoch(
+                              inv.invoiceDate))),
+                      trailing: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                              'Rs.${inv.total.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold)),
+                          Text(
+                            'Bal: Rs.${inv.balanceAmount.toStringAsFixed(0)}',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: inv.balanceAmount > 0
+                                    ? Colors.red
+                                    : Colors.green),
+                          ),
+                          if (inv.balanceAmount > 0)
+                            GestureDetector(
+                              onTap: () => _recordPayment(
+                                  invoiceId: inv.id,
+                                  maxAmount: inv.balanceAmount),
+                              child: Container(
+                                margin:
+                                    const EdgeInsets.only(top: 3),
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade600,
+                                  borderRadius:
+                                      BorderRadius.circular(4),
+                                ),
+                                child: const Text('Pay',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight:
+                                            FontWeight.bold)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  )),
+            const SizedBox(height: 16),
+
+            // Payments
+            const Text('Payments',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            if (_payments.isEmpty)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No payments yet',
+                      style: TextStyle(color: Colors.grey)),
+                ),
+              )
+            else
+              ..._payments.map((pay) => Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.green.shade100,
+                        child: const Icon(Icons.arrow_downward,
+                            color: Colors.green, size: 18),
+                      ),
+                      title: Text(
+                          'Rs.${pay.amount.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold)),
+                      subtitle: Text(
+                          '${pay.mode} • ${fmt.format(DateTime.fromMillisecondsSinceEpoch(pay.paymentDate))}'),
+                      trailing: pay.reference != null
+                          ? Text(pay.reference!,
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey))
+                          : null,
+                    ),
+                  )),
+          ],
+        ),
       ),
     );
   }
