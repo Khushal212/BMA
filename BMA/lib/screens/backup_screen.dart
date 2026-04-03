@@ -49,10 +49,13 @@ class _BackupScreenState extends State<BackupScreen> {
       final lines = await db.getInvoiceLines(inv.id);
       for (final l in lines) {
         invoiceLines.add({
-          'id': l.id, 'invoiceId': l.invoiceId,
+          'id': l.id,
+          'invoiceId': l.invoiceId,
           'itemId': l.itemId,
           'itemNameSnapshot': l.itemNameSnapshot,
-          'qty': l.qty, 'unit': l.unit, 'rate': l.rate,
+          'qty': l.qty,
+          'unit': l.unit,
+          'rate': l.rate,
           'lineSubtotal': l.lineSubtotal,
           'lineGstPercent': l.lineGstPercent,
           'lineGstAmount': l.lineGstAmount,
@@ -66,10 +69,14 @@ class _BackupScreenState extends State<BackupScreen> {
       final payments = await db.getCustomerPayments(c.id);
       for (final p in payments) {
         allPayments.add({
-          'id': p.id, 'customerId': p.customerId,
-          'paymentDate': p.paymentDate, 'amount': p.amount,
-          'mode': p.mode, 'reference': p.reference,
-          'notes': p.notes, 'createdAt': p.createdAt,
+          'id': p.id,
+          'customerId': p.customerId,
+          'paymentDate': p.paymentDate,
+          'amount': p.amount,
+          'mode': p.mode,
+          'reference': p.reference,
+          'notes': p.notes,
+          'createdAt': p.createdAt,
         });
       }
     }
@@ -78,40 +85,57 @@ class _BackupScreenState extends State<BackupScreen> {
       'version': '1.0',
       'exportedAt': DateTime.now().toIso8601String(),
       'appName': 'VyapaarX',
-      'customers': customers.map((c) => {
-        'id': c.id, 'name': c.name, 'phone': c.phone,
-        'address': c.address, 'creditLimit': c.creditLimit,
-        'defaultGstPercent': c.defaultGstPercent,
-        'createdAt': c.createdAt,
-      }).toList(),
-      'items': items.map((i) => {
-        'id': i.id, 'name': i.name, 'unit': i.unit,
-        'defaultRate': i.defaultRate,
-        'gstPercent': i.gstPercent,
-        'currentStock': i.currentStock,
-        'lowStockAlert': i.lowStockAlert,
-        'createdAt': i.createdAt,
-      }).toList(),
-      'invoices': invoices.map((i) => {
-        'id': i.id, 'invoiceNo': i.invoiceNo,
-        'customerId': i.customerId,
-        'invoiceDate': i.invoiceDate,
-        'subtotal': i.subtotal,
-        'discountPercent': i.discountPercent,
-        'discountAmount': i.discountAmount,
-        'gstAmount': i.gstAmount, 'total': i.total,
-        'paidAmount': i.paidAmount,
-        'balanceAmount': i.balanceAmount,
-        'paymentType': i.paymentType,
-        'notes': i.notes, 'createdAt': i.createdAt,
-      }).toList(),
+      'customers': customers
+          .map((c) => {
+                'id': c.id,
+                'name': c.name,
+                'phone': c.phone,
+                'address': c.address,
+                'creditLimit': c.creditLimit,
+                'defaultGstPercent': c.defaultGstPercent,
+                'createdAt': c.createdAt,
+              })
+          .toList(),
+      'items': items
+          .map((i) => {
+                'id': i.id,
+                'name': i.name,
+                'unit': i.unit,
+                'defaultRate': i.defaultRate,
+                'gstPercent': i.gstPercent,
+                'currentStock': i.currentStock,
+                'lowStockAlert': i.lowStockAlert,
+                'createdAt': i.createdAt,
+              })
+          .toList(),
+      'invoices': invoices
+          .map((i) => {
+                'id': i.id,
+                'invoiceNo': i.invoiceNo,
+                'customerId': i.customerId,
+                'invoiceDate': i.invoiceDate,
+                'subtotal': i.subtotal,
+                'discountPercent': i.discountPercent,
+                'discountAmount': i.discountAmount,
+                'gstAmount': i.gstAmount,
+                'total': i.total,
+                'paidAmount': i.paidAmount,
+                'balanceAmount': i.balanceAmount,
+                'paymentType': i.paymentType,
+                'notes': i.notes,
+                'createdAt': i.createdAt,
+              })
+          .toList(),
       'invoiceLines': invoiceLines,
       'payments': allPayments,
     };
   }
 
   Future<void> _createLocalBackup() async {
-    setState(() { _loading = true; _status = 'Creating backup...'; });
+    setState(() {
+      _loading = true;
+      _status = 'Creating backup...';
+    });
     try {
       final data = await _exportData();
       final json = jsonEncode(data);
@@ -132,7 +156,10 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _shareBackup() async {
-    setState(() { _loading = true; _status = 'Preparing backup...'; });
+    setState(() {
+      _loading = true;
+      _status = 'Preparing backup...';
+    });
     try {
       final data = await _exportData();
       final json = jsonEncode(data);
@@ -143,8 +170,10 @@ class _BackupScreenState extends State<BackupScreen> {
       await file.writeAsString(json);
       await Share.shareXFiles(
         [XFile(file.path)],
-        subject: 'VyapaarX Backup - ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
-        text: 'VyapaarX data backup. Import this file to restore your data.',
+        subject:
+            'VyapaarX Backup - ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
+        text:
+            'VyapaarX data backup. Import this file to restore your data.',
       );
       setState(() => _status = '✅ Backup shared successfully');
     } catch (e) {
@@ -173,20 +202,27 @@ class _BackupScreenState extends State<BackupScreen> {
       ),
     );
     if (confirm != true) return;
+    await _doRestore(file);
+  }
 
-    setState(() { _loading = true; _status = 'Restoring...'; });
+  Future<void> _doRestore(File file) async {
+    setState(() {
+      _loading = true;
+      _status = 'Restoring...';
+    });
     try {
       final json = await file.readAsString();
       final data = jsonDecode(json) as Map<String, dynamic>;
       final db = context.read<AppDatabase>();
 
       int restored = 0;
-      // Restore customers
       for (final c in (data['customers'] as List)) {
         final existing = await db.getCustomer(c['id']);
         if (existing == null) {
           await db.createCustomer(
-            id: c['id'], name: c['name'], phone: c['phone'],
+            id: c['id'],
+            name: c['name'],
+            phone: c['phone'],
             address: c['address'],
             creditLimit: (c['creditLimit'] as num).toDouble(),
             defaultGstPercent:
@@ -195,31 +231,113 @@ class _BackupScreenState extends State<BackupScreen> {
           restored++;
         }
       }
-      // Restore items
       for (final i in (data['items'] as List)) {
         final existing = await db.getItem(i['id']);
         if (existing == null) {
           await db.createItem(
-            id: i['id'], name: i['name'], unit: i['unit'],
+            id: i['id'],
+            name: i['name'],
+            unit: i['unit'],
             defaultRate: i['defaultRate'] != null
-                ? (i['defaultRate'] as num).toDouble() : null,
+                ? (i['defaultRate'] as num).toDouble()
+                : null,
             gstPercent: (i['gstPercent'] as num).toDouble(),
             currentStock: i['currentStock'] != null
-                ? (i['currentStock'] as num).toDouble() : 0,
+                ? (i['currentStock'] as num).toDouble()
+                : 0,
             lowStockAlert: i['lowStockAlert'] != null
-                ? (i['lowStockAlert'] as num).toDouble() : 10,
+                ? (i['lowStockAlert'] as num).toDouble()
+                : 10,
           );
           restored++;
         }
       }
 
-      setState(() => _status =
-          '✅ Restored $restored new records successfully!');
+      setState(() =>
+          _status = '✅ Restored $restored new records successfully!');
     } catch (e) {
       setState(() => _status = '❌ Restore failed: $e');
     } finally {
       setState(() => _loading = false);
     }
+  }
+
+  /// Pick a .json backup file from device storage using a simple path input
+  Future<void> _uploadAndRestore() async {
+    final pathCtrl = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('📂 Upload Backup File'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'First share/save your backup JSON file to your device, '
+              'then enter the full file path below.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: pathCtrl,
+              decoration: const InputDecoration(
+                labelText: 'File path',
+                hintText:
+                    '/storage/emulated/0/Download/vyapaarx_backup.json',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.folder_open),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Quick path shortcuts
+            const Text('Common locations:',
+                style:
+                    TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              children: [
+                ActionChip(
+                  label: const Text('Downloads',
+                      style: TextStyle(fontSize: 11)),
+                  onPressed: () => pathCtrl.text =
+                      '/storage/emulated/0/Download/',
+                ),
+                ActionChip(
+                  label: const Text('Documents',
+                      style: TextStyle(fontSize: 11)),
+                  onPressed: () => pathCtrl.text =
+                      '/storage/emulated/0/Documents/',
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.restore),
+            label: const Text('Restore'),
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+
+    if (result != true) return;
+    final path = pathCtrl.text.trim();
+    if (path.isEmpty) return;
+
+    final file = File(path);
+    if (!await file.exists()) {
+      setState(
+          () => _status = '❌ File not found at path: $path');
+      return;
+    }
+    await _doRestore(file);
   }
 
   @override
@@ -234,6 +352,7 @@ class _BackupScreenState extends State<BackupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Status banner
             if (_status.isNotEmpty)
               Container(
                 width: double.infinity,
@@ -253,42 +372,54 @@ class _BackupScreenState extends State<BackupScreen> {
                               ? Colors.red.shade200
                               : Colors.blue.shade200),
                 ),
-                child: Text(_status),
+                child: Row(children: [
+                  Icon(
+                    _status.startsWith('✅')
+                        ? Icons.check_circle
+                        : _status.startsWith('❌')
+                            ? Icons.error
+                            : Icons.info,
+                    color: _status.startsWith('✅')
+                        ? Colors.green
+                        : _status.startsWith('❌')
+                            ? Colors.red
+                            : Colors.blue,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_status)),
+                ]),
               ),
 
-            // Backup section
-            const Text('Create Backup',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 16)),
+            // ── BACKUP SECTION ─────────────────────────────
+            _sectionHeader(
+                Icons.backup, 'Create Backup', Colors.green),
             const SizedBox(height: 4),
             const Text(
-                'Export all your customers, items, invoices and payments.',
-                style: TextStyle(color: Colors.grey, fontSize: 13)),
+              'Export all customers, items, invoices and payments.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
             const SizedBox(height: 12),
 
+            // Big backup buttons
             Row(children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  icon: _loading
-                      ? const SizedBox(
-                          width: 16, height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white))
-                      : const Icon(Icons.save),
-                  label: const Text('Save to Device'),
-                  onPressed:
-                      _loading ? null : _createLocalBackup,
+                child: _BigButton(
+                  icon: Icons.save_alt,
+                  label: 'Save to\nDevice',
+                  color: Colors.green,
+                  loading: _loading,
+                  onPressed: _createLocalBackup,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.share),
-                  label: const Text('Share / Drive'),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade600),
-                  onPressed: _loading ? null : _shareBackup,
+                child: _BigButton(
+                  icon: Icons.share,
+                  label: 'Share /\nGoogle Drive',
+                  color: Colors.blue,
+                  loading: _loading,
+                  onPressed: _shareBackup,
                 ),
               ),
             ]),
@@ -297,13 +428,38 @@ class _BackupScreenState extends State<BackupScreen> {
             const Divider(),
             const SizedBox(height: 12),
 
-            // Local backups list
+            // ── RESTORE SECTION ────────────────────────────
+            _sectionHeader(
+                Icons.restore, 'Restore Data', Colors.orange),
+            const SizedBox(height: 4),
+            const Text(
+              'Restore from a previously saved backup file.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+
+            // Big restore/upload button
+            SizedBox(
+              width: double.infinity,
+              child: _BigButton(
+                icon: Icons.upload_file,
+                label: 'Upload & Restore Backup File',
+                color: Colors.orange,
+                loading: _loading,
+                onPressed: _uploadAndRestore,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 12),
+
+            // ── LOCAL BACKUPS LIST ─────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Saved Backups',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+                _sectionHeader(
+                    Icons.folder, 'Saved Backups', Colors.purple),
                 IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: _loadBackupList),
@@ -312,42 +468,68 @@ class _BackupScreenState extends State<BackupScreen> {
             const SizedBox(height: 8),
 
             if (_localBackups.isEmpty)
-              const Card(
+              Card(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Center(
-                      child: Text('No local backups yet',
-                          style:
-                              TextStyle(color: Colors.grey))),
+                    child: Column(
+                      children: [
+                        Icon(Icons.backup_outlined,
+                            size: 48,
+                            color: Colors.grey.shade300),
+                        const SizedBox(height: 8),
+                        const Text('No local backups yet',
+                            style:
+                                TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 4),
+                        const Text(
+                            'Tap "Save to Device" to create one',
+                            style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12)),
+                      ],
+                    ),
+                  ),
                 ),
               )
             else
               ..._localBackups.map((file) {
                 final name = file.path.split('/').last;
                 final stat = file.statSync();
-                final size =
-                    (stat.size / 1024).toStringAsFixed(1);
+                final size = (stat.size / 1024).toStringAsFixed(1);
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    leading: const Icon(
-                        Icons.backup, color: Colors.green),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.green.shade50,
+                      child: const Icon(Icons.description,
+                          color: Colors.green),
+                    ),
                     title: Text(name,
                         style: const TextStyle(fontSize: 13)),
-                    subtitle: Text('$size KB'),
+                    subtitle: Text('$size KB',
+                        style: const TextStyle(fontSize: 11)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        IconButton(
+                        // Restore button
+                        TextButton.icon(
                           icon: const Icon(Icons.restore,
-                              color: Colors.blue),
-                          tooltip: 'Restore',
+                              size: 16, color: Colors.orange),
+                          label: const Text('Restore',
+                              style: TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 12)),
                           onPressed: () =>
                               _restoreFromFile(file),
+                          style: TextButton.styleFrom(
+                              padding: const EdgeInsets
+                                  .symmetric(horizontal: 8)),
                         ),
+                        // Share button
                         IconButton(
                           icon: const Icon(Icons.share,
-                              color: Colors.grey),
+                              size: 18, color: Colors.grey),
                           tooltip: 'Share',
                           onPressed: () async {
                             await Share.shareXFiles(
@@ -362,25 +544,28 @@ class _BackupScreenState extends State<BackupScreen> {
               }),
 
             const SizedBox(height: 16),
+
+            // Tip card
             Card(
               color: Colors.amber.shade50,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Row(children: [
-                      Icon(Icons.info_outline,
+                      const Icon(Icons.lightbulb_outline,
                           color: Colors.amber, size: 18),
-                      SizedBox(width: 6),
-                      Text('Tip',
+                      const SizedBox(width: 6),
+                      const Text('Tips',
                           style: TextStyle(
                               fontWeight: FontWeight.bold)),
                     ]),
-                    SizedBox(height: 6),
-                    Text(
-                      '• Use "Share / Drive" to save backup to Google Drive\n'
-                      '• Tap "Restore" to import data from a saved backup\n'
+                    const SizedBox(height: 6),
+                    const Text(
+                      '• Use "Share / Google Drive" to save backup to Google Drive\n'
+                      '• Use "Save to Device" for a local backup\n'
+                      '• Use "Upload & Restore" to restore from any saved file\n'
                       '• Take a backup weekly to avoid data loss',
                       style: TextStyle(fontSize: 12),
                     ),
@@ -393,4 +578,62 @@ class _BackupScreenState extends State<BackupScreen> {
       ),
     );
   }
+
+  Widget _sectionHeader(IconData icon, String title, Color color) =>
+      Row(children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 8),
+        Text(title,
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: color)),
+      ]);
+}
+
+class _BigButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool loading;
+  final VoidCallback onPressed;
+
+  const _BigButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.loading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) => ElevatedButton(
+        onPressed: loading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(
+              vertical: 16, horizontal: 12),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
+        ),
+        child: loading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white))
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 28),
+                  const SizedBox(height: 6),
+                  Text(label,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+      );
 }
