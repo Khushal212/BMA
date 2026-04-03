@@ -170,9 +170,10 @@ class _StockScreenState extends State<StockScreen> {
       ),
     );
     if (result != true) return;
-    await context.read<AppDatabase>().updateItem(
-      item.copyWith(
-        lowStockAlert: double.parse(alertCtrl.text.trim()),
+    await context.read<AppDatabase>().updateItem(ItemsCompanion(
+    id: Value(item.id),
+    lowStockAlert: Value(double.parse(alertCtrl.text.trim())),
+      ));
       ),
     );
     _load();
