@@ -7,13 +7,13 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final localeProvider = context.watch<LocaleProvider>();
-    final currentCode =
-        localeProvider.locale.languageCode;
+    final currentCode = localeProvider.locale.languageCode;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings / सेटिंग्स'),
+        title: Text(l.selectLanguage),
         centerTitle: true,
       ),
       body: ListView(
@@ -23,65 +23,59 @@ class SettingsScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
                     const Icon(Icons.language,
-                        color: Color(0xFF2E7D32)),
+                        color: AppColors.navy),
                     const SizedBox(width: 8),
-                    const Text('Select Language',
-                        style: TextStyle(
+                    Text(l.selectLanguage,
+                        style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold)),
                   ]),
                   const SizedBox(height: 4),
                   const Text(
-                      'भाषा चुनें / ভাষা নির্বাচন করুন / மொழி தேர்வு',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey)),
+                    'भाषा चुनें / ভাষা নির্বাচন / மொழி தேர்வு',
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                   const SizedBox(height: 12),
                   ...AppLanguages.names.entries.map((e) {
-                    final isSelected =
-                        e.key == currentCode;
+                    final isSelected = e.key == currentCode;
                     return InkWell(
                       onTap: () {
                         context
                             .read<LocaleProvider>()
                             .setLocale(Locale(e.key));
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(
-                          content: Text(
-                              'Language changed to ${e.value}'),
-                          duration:
-                              const Duration(seconds: 2),
-                        ));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                '${l.languageChanged} ${e.value}'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
                       },
-                      borderRadius:
-                          BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        margin: const EdgeInsets.only(
-                            bottom: 6),
+                        margin: const EdgeInsets.only(bottom: 6),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 12),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Colors.green.shade50
+                              ? AppColors.navy.withOpacity(0.08)
                               : Colors.transparent,
-                          borderRadius:
-                              BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isSelected
-                                ? Colors.green.shade400
+                                ? AppColors.navy
                                 : Colors.grey.shade200,
                             width: isSelected ? 2 : 1,
                           ),
                         ),
                         child: Row(children: [
                           Text(_flagEmoji(e.key),
-                              style: const TextStyle(
-                                  fontSize: 24)),
+                              style: const TextStyle(fontSize: 24)),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -92,16 +86,14 @@ class SettingsScreen extends StatelessWidget {
                                     ? FontWeight.bold
                                     : FontWeight.normal,
                                 color: isSelected
-                                    ? Colors.green.shade700
+                                    ? AppColors.navy
                                     : Colors.black87,
                               ),
                             ),
                           ),
                           if (isSelected)
-                            Icon(Icons.check_circle,
-                                color:
-                                    Colors.green.shade600,
-                                size: 22),
+                            const Icon(Icons.check_circle,
+                                color: AppColors.navy, size: 22),
                         ]),
                       ),
                     );
@@ -115,24 +107,22 @@ class SettingsScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(children: [
-                    Icon(Icons.info_outline,
-                        color: Color(0xFF2E7D32)),
-                    SizedBox(width: 8),
-                    Text('About',
+                  Row(children: [
+                    const Icon(Icons.info_outline,
+                        color: AppColors.navy),
+                    const SizedBox(width: 8),
+                    const Text('About',
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold)),
                   ]),
                   const SizedBox(height: 12),
-                  _infoRow('App', 'BMA v1.0.0'),
+                  _infoRow('App', 'VyapaarX'),
+                  _infoRow('Version', '1.0.0'),
                   _infoRow('For',
                       'Vegetable Wholesalers & Traders'),
-                  _infoRow('Features',
-                      'Customers, Items, Invoices, Payments'),
                 ],
               ),
             ),
@@ -162,18 +152,10 @@ class SettingsScreen extends StatelessWidget {
 
   String _flagEmoji(String code) {
     const flags = {
-      'en': '🇬🇧',
-      'hi': '🇮🇳',
-      'mr': '🇮🇳',
-      'gu': '🇮🇳',
-      'ta': '🇮🇳',
-      'te': '🇮🇳',
-      'bn': '🇮🇳',
-      'kn': '🇮🇳',
-      'ml': '🇮🇳',
-      'pa': '🇮🇳',
-      'or': '🇮🇳',
-      'ur': '🇮🇳',
+      'en': '🇬🇧', 'hi': '🇮🇳', 'mr': '🇮🇳',
+      'gu': '🇮🇳', 'ta': '🇮🇳', 'te': '🇮🇳',
+      'bn': '🇮🇳', 'kn': '🇮🇳', 'ml': '🇮🇳',
+      'pa': '🇮🇳', 'or': '🇮🇳', 'ur': '🇮🇳',
       'as': '🇮🇳',
     };
     return flags[code] ?? '🌐';
