@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import '../database/app_database.dart';
 import 'package:drift/drift.dart' show Value;
+import '../database/app_database.dart';
 
 class NewInvoiceScreen extends StatefulWidget {
   const NewInvoiceScreen({Key? key}) : super(key: key);
 
   @override
-  State<NewInvoiceScreen> createState() =>
-      _NewInvoiceScreenState();
+  State<NewInvoiceScreen> createState() => _NewInvoiceScreenState();
 }
 
 class _InvoiceLine {
@@ -19,13 +18,26 @@ class _InvoiceLine {
   double qty = 1;
   double rate = 0;
   double gstPercent = 0;
-  double marginPercent = 0; // NEW: margin/extra charge %
+  double marginPercent = 0;
+
+  // Controllers so fields update when item selected
+  final TextEditingController qtyCtrl = TextEditingController(text: '1');
+  final TextEditingController rateCtrl = TextEditingController(text: '0');
+  final TextEditingController gstCtrl = TextEditingController(text: '0');
+  final TextEditingController marginCtrl = TextEditingController(text: '0');
 
   double get lineSubtotal => qty * rate;
   double get marginAmount => lineSubtotal * marginPercent / 100;
   double get afterMargin => lineSubtotal + marginAmount;
   double get lineGstAmount => afterMargin * gstPercent / 100;
   double get lineTotal => afterMargin + lineGstAmount;
+
+  void dispose() {
+    qtyCtrl.dispose();
+    rateCtrl.dispose();
+    gstCtrl.dispose();
+    marginCtrl.dispose();
+  }
 }
 
 class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
@@ -47,6 +59,14 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     super.initState();
     _lines.add(_InvoiceLine());
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    for (final l in _lines) {
+      l.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -75,14 +95,10 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     }
   }
 
-  double get _subtotal =>
-      _lines.fold(0.0, (s, l) => s + l.afterMargin);
-  double get _discountAmount =>
-      _subtotal * _discountPercent / 100;
-  double get _gstAmount =>
-      _lines.fold(0.0, (s, l) => s + l.lineGstAmount);
-  double get _total =>
-      _subtotal - _discountAmount + _gstAmount;
+  double get _subtotal => _lines.fold(0.0, (s, l) => s + l.afterMargin);
+  double get _discountAmount => _subtotal * _discountPercent / 100;
+  double get _gstAmount => _lines.fold(0.0, (s, l) => s + l.lineGstAmount);
+  double get _total => _subtotal - _discountAmount + _gstAmount;
   double get _balanceAmount {
     if (_paymentType == 'CREDIT') return _total;
     return (_total - _paidAmount).clamp(0.0, double.infinity);
@@ -90,20 +106,19 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
 
   bool get _willExceedLimit =>
       _selectedCustomer != null &&
-      (_customerOutstanding + _balanceAmount) >
-          _selectedCustomer!.creditLimit;
+      (_customerOutstanding + _balanceAmount) > _selectedCustomer!.creditLimit;
 
   Future<void> _saveInvoice() async {
     if (_selectedCustomerId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please select a customer')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a customer')));
       return;
     }
     final validLines =
         _lines.where((l) => l.itemId != null && l.qty > 0).toList();
     if (validLines.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Add at least one item')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Add at least one item')));
       return;
     }
 
@@ -113,21 +128,23 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       final invoiceNo = await db.generateInvoiceNo();
       final invoiceId = const Uuid().v4();
 
-      final lineData = validLines.map((l) => InvoiceLinesCompanion(
-        id: Value(const Uuid().v4()),
-        invoiceId: Value(invoiceId),
-        itemId: Value(l.itemId!),
-        itemNameSnapshot: Value(l.itemName),
-        qty: Value(l.qty),
-        unit: Value(l.unit),
-        rate: Value(l.rate),
-        lineSubtotal: Value(l.afterMargin),
-        lineGstPercent: Value(l.gstPercent),
-        lineGstAmount: Value(l.lineGstAmount),
-        lineTotal: Value(l.lineTotal),
-        marginPercent: Value(l.marginPercent),
-      )).toList();
-      
+      final lineData = validLines
+          .map((l) => InvoiceLinesCompanion(
+                id: Value(const Uuid().v4()),
+                invoiceId: Value(invoiceId),
+                itemId: Value(l.itemId!),
+                itemNameSnapshot: Value(l.itemName),
+                qty: Value(l.qty),
+                unit: Value(l.unit),
+                rate: Value(l.rate),
+                lineSubtotal: Value(l.afterMargin),
+                lineGstPercent: Value(l.gstPercent),
+                lineGstAmount: Value(l.lineGstAmount),
+                lineTotal: Value(l.lineTotal),
+                marginPercent: Value(l.marginPercent),
+              ))
+          .toList();
+
       await db.createInvoice(
         id: invoiceId,
         invoiceNo: invoiceNo,
@@ -148,14 +165,9 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Invoice $invoiceNo saved ✓'),
           backgroundColor: Colors.green,
-          action: SnackBarAction(
-            label: 'VIEW',
-            textColor: Colors.white,
-            onPressed: () {
-              // Navigate to history tab to view
-            },
-          ),
         ));
+        // Reset form
+        for (final l in _lines) l.dispose();
         setState(() {
           _selectedCustomerId = null;
           _selectedCustomer = null;
@@ -170,8 +182,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red));
+            content: Text('Error: $e'), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -186,8 +197,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-          title: const Text('New Invoice'),
-          centerTitle: true),
+          title: const Text('New Invoice'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -222,13 +232,10 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                           : Colors.green.shade300),
                 ),
                 child: Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                        'Due: Rs.${_customerOutstanding.toStringAsFixed(0)}'),
-                    Text(
-                        'Limit: Rs.${_selectedCustomer!.creditLimit.toStringAsFixed(0)}'),
+                    Text('Due: Rs.${_customerOutstanding.toStringAsFixed(0)}'),
+                    Text('Limit: Rs.${_selectedCustomer!.creditLimit.toStringAsFixed(0)}'),
                     if (_willExceedLimit)
                       const Text('WILL EXCEED!',
                           style: TextStyle(
@@ -243,8 +250,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
             const SizedBox(height: 16),
             const Text('Items',
                 style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15)),
+                    fontWeight: FontWeight.bold, fontSize: 15)),
             const SizedBox(height: 8),
 
             // Invoice lines
@@ -263,28 +269,31 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                           decoration: const InputDecoration(
                               labelText: 'Item',
                               border: OutlineInputBorder(),
-                              contentPadding:
-                                  EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8)),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8)),
                           items: _items
                               .map((it) => DropdownMenuItem(
                                   value: it.id,
                                   child: Text(it.name,
-                                      overflow: TextOverflow
-                                          .ellipsis)))
+                                      overflow:
+                                          TextOverflow.ellipsis)))
                               .toList(),
                           onChanged: (v) {
-                            final it = _items
-                                .firstWhere((i) => i.id == v);
+                            final it =
+                                _items.firstWhere((i) => i.id == v);
                             setState(() {
                               line.itemId = v;
                               line.itemName = it.name;
                               line.unit = it.unit;
                               line.gstPercent = it.gstPercent;
+                              // Auto-fill default rate
                               if (it.defaultRate != null) {
                                 line.rate = it.defaultRate!;
+                                line.rateCtrl.text =
+                                    it.defaultRate!.toStringAsFixed(0);
                               }
+                              line.gstCtrl.text =
+                                  it.gstPercent.toStringAsFixed(0);
                             });
                           },
                         ),
@@ -293,64 +302,53 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                         IconButton(
                           icon: const Icon(Icons.close,
                               color: Colors.red),
-                          onPressed: () => setState(
-                              () => _lines.removeAt(idx)),
+                          onPressed: () =>
+                              setState(() => _lines.removeAt(idx)),
                         ),
                     ]),
                     const SizedBox(height: 8),
                     Row(children: [
                       Expanded(
                         child: TextFormField(
-                          initialValue:
-                              line.qty.toStringAsFixed(0),
+                          controller: line.qtyCtrl,
                           decoration: InputDecoration(
                               labelText:
                                   'Qty (${line.unit.isEmpty ? "unit" : line.unit})',
                               border: const OutlineInputBorder(),
                               contentPadding:
                                   const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8)),
+                                      horizontal: 10, vertical: 8)),
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() =>
-                              line.qty =
-                                  double.tryParse(v) ?? 1),
+                              line.qty = double.tryParse(v) ?? 1),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextFormField(
-                          initialValue:
-                              line.rate.toStringAsFixed(0),
+                          controller: line.rateCtrl,
                           decoration: const InputDecoration(
                               labelText: 'Rate (Rs.)',
                               border: OutlineInputBorder(),
-                              contentPadding:
-                                  EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8)),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8)),
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() =>
-                              line.rate =
-                                  double.tryParse(v) ?? 0),
+                              line.rate = double.tryParse(v) ?? 0),
                         ),
                       ),
                     ]),
                     const SizedBox(height: 8),
-                    // Margin % and GST % row
                     Row(children: [
                       Expanded(
                         child: TextFormField(
-                          initialValue: line.marginPercent
-                              .toStringAsFixed(0),
+                          controller: line.marginCtrl,
                           decoration: const InputDecoration(
                               labelText: 'Margin %',
                               hintText: '0',
                               border: OutlineInputBorder(),
-                              contentPadding:
-                                  EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8)),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8)),
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() =>
                               line.marginPercent =
@@ -360,15 +358,12 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextFormField(
-                          initialValue: line.gstPercent
-                              .toStringAsFixed(0),
+                          controller: line.gstCtrl,
                           decoration: const InputDecoration(
                               labelText: 'GST %',
                               border: OutlineInputBorder(),
-                              contentPadding:
-                                  EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8)),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8)),
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() =>
                               line.gstPercent =
@@ -377,13 +372,11 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                       ),
                     ]),
                     const SizedBox(height: 4),
-                    // Line breakdown
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                           color: Colors.grey.shade50,
-                          borderRadius:
-                              BorderRadius.circular(6)),
+                          borderRadius: BorderRadius.circular(6)),
                       child: Column(children: [
                         if (line.marginPercent > 0)
                           Row(
@@ -439,14 +432,12 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                   min: 0,
                   max: 30,
                   divisions: 30,
-                  label:
-                      '${_discountPercent.toStringAsFixed(0)}%',
+                  label: '${_discountPercent.toStringAsFixed(0)}%',
                   onChanged: (v) =>
                       setState(() => _discountPercent = v),
                 ),
               ),
-              Text(
-                  '${_discountPercent.toStringAsFixed(0)}%'),
+              Text('${_discountPercent.toStringAsFixed(0)}%'),
             ]),
 
             const SizedBox(height: 8),
@@ -456,8 +447,8 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                   labelText: 'Payment Type',
                   border: OutlineInputBorder()),
               items: ['CASH', 'UPI', 'BANK', 'CREDIT', 'MIXED']
-                  .map((t) => DropdownMenuItem(
-                      value: t, child: Text(t)))
+                  .map((t) =>
+                      DropdownMenuItem(value: t, child: Text(t)))
                   .toList(),
               onChanged: (v) =>
                   setState(() => _paymentType = v!),
@@ -470,8 +461,8 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                     labelText: 'Paid Amount (Rs.)',
                     border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
-                onChanged: (v) => setState(() =>
-                    _paidAmount = double.tryParse(v) ?? 0),
+                onChanged: (v) => setState(
+                    () => _paidAmount = double.tryParse(v) ?? 0),
               ),
             ],
 
@@ -484,8 +475,8 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(children: [
-                  _summaryRow('Subtotal (after margin)',
-                      _subtotal),
+                  _summaryRow(
+                      'Subtotal (after margin)', _subtotal),
                   if (_discountAmount > 0)
                     _summaryRow(
                         'Discount (${_discountPercent.toStringAsFixed(0)}%)',
@@ -496,8 +487,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                   const Divider(),
                   _summaryRow('TOTAL', _total,
                       bold: true, fontSize: 18),
-                  if (_paymentType != 'CREDIT' &&
-                      _paidAmount > 0)
+                  if (_paymentType != 'CREDIT' && _paidAmount > 0)
                     _summaryRow('Paid', -_paidAmount,
                         color: Colors.green),
                   _summaryRow('Balance Due', _balanceAmount,
@@ -546,9 +536,8 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
               'Rs.${amount.abs().toStringAsFixed(2)}',
               style: TextStyle(
                   fontSize: fontSize,
-                  fontWeight: bold
-                      ? FontWeight.bold
-                      : FontWeight.normal,
+                  fontWeight:
+                      bold ? FontWeight.bold : FontWeight.normal,
                   color: color),
             ),
           ],
