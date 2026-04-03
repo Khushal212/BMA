@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'database/app_database.dart';
@@ -31,15 +32,17 @@ class AppColors {
   static const warning = Color(0xFFF39C12);
 }
 
+// ── Helper extension for easy localization access ──────────────
+extension L10n on BuildContext {
+  AppLocalizations get l10n => AppLocalizations.of(this);
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Set status bar to match navy theme
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
-
   final prefs = await SharedPreferences.getInstance();
   final langCode = prefs.getString('language_code') ?? 'en';
   final isDark = prefs.getBool('dark_mode') ?? false;
@@ -87,13 +90,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final lp = context.watch<LocaleProvider>();
     final tp = context.watch<ThemeProvider>();
-
     return MaterialApp(
       title: 'VyapaarX',
       debugShowCheckedModeBanner: false,
       locale: lp.locale,
-      supportedLocales: AppLanguages.supported,
+      supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
@@ -111,8 +114,6 @@ class MyApp extends StatelessWidget {
           seedColor: AppColors.navy,
           primary: AppColors.navy,
           secondary: AppColors.gold,
-          surface: AppColors.offWhite,
-          background: AppColors.offWhite,
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: AppColors.offWhite,
@@ -139,9 +140,6 @@ class MyApp extends StatelessWidget {
           unselectedItemColor: Colors.white54,
           type: BottomNavigationBarType.fixed,
           elevation: 8,
-          selectedLabelStyle: TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 11),
-          unselectedLabelStyle: TextStyle(fontSize: 10),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -151,7 +149,6 @@ class MyApp extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(
                 horizontal: 16, vertical: 14),
-            elevation: 2,
           ),
         ),
         cardTheme: CardTheme(
@@ -169,22 +166,11 @@ class MyApp extends StatelessWidget {
             borderSide:
                 const BorderSide(color: AppColors.navy, width: 2),
           ),
-          labelStyle:
-              const TextStyle(color: AppColors.navyLight),
-          floatingLabelStyle:
-              const TextStyle(color: AppColors.navy),
         ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        floatingActionButtonTheme:
+            const FloatingActionButtonThemeData(
           backgroundColor: AppColors.gold,
           foregroundColor: AppColors.navy,
-          elevation: 4,
-        ),
-        drawerTheme: const DrawerThemeData(
-          backgroundColor: AppColors.white,
-        ),
-        chipTheme: ChipThemeData(
-          selectedColor: AppColors.navy.withOpacity(0.15),
-          labelStyle: const TextStyle(fontSize: 12),
         ),
       );
 
@@ -194,8 +180,6 @@ class MyApp extends StatelessWidget {
           seedColor: AppColors.navy,
           primary: AppColors.navyLight,
           secondary: AppColors.gold,
-          surface: const Color(0xFF1A1A2E),
-          background: const Color(0xFF0F0F1A),
           brightness: Brightness.dark,
         ),
         scaffoldBackgroundColor: const Color(0xFF0F0F1A),
@@ -203,11 +187,6 @@ class MyApp extends StatelessWidget {
           backgroundColor: AppColors.navyDark,
           foregroundColor: AppColors.white,
           elevation: 0,
-          titleTextStyle: TextStyle(
-            color: AppColors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
         ),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           backgroundColor: AppColors.navyDark,
@@ -218,25 +197,15 @@ class MyApp extends StatelessWidget {
         cardTheme: CardTheme(
           color: const Color(0xFF1A2340),
           elevation: 4,
-          shadowColor: Colors.black45,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16)),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.navyLight,
-            foregroundColor: AppColors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-          ),
         ),
       );
 }
 
-// ── SPLASH SCREEN ──────────────────────────────────────────────
+// ── Splash Screen ──────────────────────────────────────────────
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -255,7 +224,6 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-
     _bgCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
     _logoCtrl = AnimationController(
@@ -265,22 +233,23 @@ class _SplashScreenState extends State<SplashScreen>
 
     _bgOpacity = Tween<double>(begin: 0, end: 1).animate(
         CurvedAnimation(parent: _bgCtrl, curve: Curves.easeIn));
-
     _logoScale = Tween<double>(begin: 0.3, end: 1.0).animate(
-        CurvedAnimation(parent: _logoCtrl, curve: Curves.elasticOut));
+        CurvedAnimation(
+            parent: _logoCtrl, curve: Curves.elasticOut));
     _logoOpacity = Tween<double>(begin: 0, end: 1).animate(
         CurvedAnimation(
             parent: _logoCtrl,
-            curve: const Interval(0.0, 0.5, curve: Curves.easeIn)));
-
+            curve: const Interval(0.0, 0.5,
+                curve: Curves.easeIn)));
     _textOpacity = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _textCtrl, curve: Curves.easeIn));
+        CurvedAnimation(
+            parent: _textCtrl, curve: Curves.easeIn));
     _textSlide =
-        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        Tween<Offset>(
+                begin: const Offset(0, 0.3), end: Offset.zero)
             .animate(CurvedAnimation(
                 parent: _textCtrl, curve: Curves.easeOut));
 
-    // Sequence animations
     _bgCtrl.forward().then((_) {
       _logoCtrl.forward().then((_) {
         _textCtrl.forward().then((_) {
@@ -323,11 +292,9 @@ class _SplashScreenState extends State<SplashScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppColors.navyDark
-                    .withOpacity(_bgOpacity.value),
+                AppColors.navyDark.withOpacity(_bgOpacity.value),
                 AppColors.navy.withOpacity(_bgOpacity.value),
-                AppColors.navyLight
-                    .withOpacity(_bgOpacity.value),
+                AppColors.navyLight.withOpacity(_bgOpacity.value),
               ],
             ),
           ),
@@ -335,7 +302,6 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Animated logo container
                 AnimatedBuilder(
                   animation: _logoCtrl,
                   builder: (_, __) => Transform.scale(
@@ -346,35 +312,27 @@ class _SplashScreenState extends State<SplashScreen>
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
-                          color: Colors.white
-                              .withOpacity(0.1),
-                          borderRadius:
-                              BorderRadius.circular(30),
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(30),
                           border: Border.all(
-                              color: Colors.white
-                                  .withOpacity(0.3),
+                              color: Colors.white.withOpacity(0.3),
                               width: 2),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.gold
-                                  .withOpacity(0.3),
+                              color:
+                                  AppColors.gold.withOpacity(0.3),
                               blurRadius: 30,
                               spreadRadius: 5,
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.store,
-                          size: 60,
-                          color: AppColors.gold,
-                        ),
+                        child: const Icon(Icons.store,
+                            size: 60, color: AppColors.gold),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Animated text
                 AnimatedBuilder(
                   animation: _textCtrl,
                   builder: (_, __) => SlideTransition(
@@ -382,27 +340,23 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Opacity(
                       opacity: _textOpacity.value,
                       child: Column(children: [
-                        const Text(
-                          'VyapaarX',
-                          style: TextStyle(
-                            color: AppColors.white,
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
-                        ),
+                        const Text('VyapaarX',
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                            )),
                         const SizedBox(height: 8),
                         Text(
                           'Smart Business Management',
                           style: TextStyle(
-                            color: Colors.white
-                                .withOpacity(0.7),
+                            color: Colors.white.withOpacity(0.7),
                             fontSize: 14,
                             letterSpacing: 1,
                           ),
                         ),
                         const SizedBox(height: 32),
-                        // Loading dots
                         _LoadingDots(),
                       ]),
                     ),
@@ -433,15 +387,13 @@ class _LoadingDotsState extends State<_LoadingDots>
     _controllers = List.generate(
       3,
       (i) => AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 600),
-      ),
+          vsync: this,
+          duration: const Duration(milliseconds: 600)),
     );
     _anims = _controllers
         .map((c) => Tween<double>(begin: 0, end: 1).animate(
             CurvedAnimation(parent: c, curve: Curves.easeInOut)))
         .toList();
-
     for (int i = 0; i < 3; i++) {
       Future.delayed(Duration(milliseconds: i * 200), () {
         if (mounted) _controllers[i].repeat(reverse: true);
@@ -476,7 +428,7 @@ class _LoadingDotsState extends State<_LoadingDots>
       );
 }
 
-// ── MAIN NAVIGATION ────────────────────────────────────────────
+// ── Main Navigation ────────────────────────────────────────────
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
 
@@ -533,6 +485,7 @@ class _MainNavigationState extends State<MainNavigation>
   @override
   Widget build(BuildContext context) {
     final tp = context.watch<ThemeProvider>();
+    final l = context.l10n;
 
     final screens = [
       const DashboardScreen(),
@@ -540,29 +493,6 @@ class _MainNavigationState extends State<MainNavigation>
       const ItemsScreen(),
       const NewInvoiceScreen(),
       const HistoryScreen(),
-    ];
-
-    final tabItems = [
-      const BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard_outlined),
-          activeIcon: Icon(Icons.dashboard),
-          label: 'Dashboard'),
-      const BottomNavigationBarItem(
-          icon: Icon(Icons.people_outline),
-          activeIcon: Icon(Icons.people),
-          label: 'Customers'),
-      const BottomNavigationBarItem(
-          icon: Icon(Icons.inventory_2_outlined),
-          activeIcon: Icon(Icons.inventory_2),
-          label: 'Items'),
-      const BottomNavigationBarItem(
-          icon: Icon(Icons.receipt_long_outlined),
-          activeIcon: Icon(Icons.receipt_long),
-          label: 'Invoice'),
-      const BottomNavigationBarItem(
-          icon: Icon(Icons.history_outlined),
-          activeIcon: Icon(Icons.history),
-          label: 'History'),
     ];
 
     return Scaffold(
@@ -586,7 +516,28 @@ class _MainNavigationState extends State<MainNavigation>
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onTabTap,
-          items: tabItems,
+          items: [
+            BottomNavigationBarItem(
+                icon: const Icon(Icons.dashboard_outlined),
+                activeIcon: const Icon(Icons.dashboard),
+                label: l.dashboard),
+            BottomNavigationBarItem(
+                icon: const Icon(Icons.people_outline),
+                activeIcon: const Icon(Icons.people),
+                label: l.customers),
+            BottomNavigationBarItem(
+                icon: const Icon(Icons.inventory_2_outlined),
+                activeIcon: const Icon(Icons.inventory_2),
+                label: l.items),
+            BottomNavigationBarItem(
+                icon: const Icon(Icons.receipt_long_outlined),
+                activeIcon: const Icon(Icons.receipt_long),
+                label: l.invoice),
+            BottomNavigationBarItem(
+                icon: const Icon(Icons.history_outlined),
+                activeIcon: const Icon(Icons.history),
+                label: l.history),
+          ],
         ),
       ),
       floatingActionButton: _selectedIndex == 0
@@ -597,13 +548,13 @@ class _MainNavigationState extends State<MainNavigation>
               child: const Icon(Icons.menu),
             )
           : null,
-      drawer: _buildDrawer(tp),
+      drawer: _buildDrawer(tp, l),
     );
   }
 
-  Widget _buildDrawer(ThemeProvider tp) => Drawer(
+  Widget _buildDrawer(ThemeProvider tp, AppLocalizations l) =>
+      Drawer(
         child: Column(children: [
-          // Gradient header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 50, 16, 20),
@@ -631,33 +582,30 @@ class _MainNavigationState extends State<MainNavigation>
                       color: AppColors.gold, size: 30),
                 ),
                 const SizedBox(height: 12),
-                const Text('VyapaarX',
-                    style: TextStyle(
+                Text(l.appTitle,
+                    style: const TextStyle(
                         color: AppColors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1)),
-                Text('Smart Business Management',
+                Text(l.appSubtitle,
                     style: TextStyle(
                         color: Colors.white.withOpacity(0.6),
                         fontSize: 12)),
               ],
             ),
           ),
-
-          // Menu items
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
                 SwitchListTile(
                   secondary: Icon(
-                    tp.isDark
-                        ? Icons.dark_mode
-                        : Icons.light_mode,
-                    color: AppColors.navy,
-                  ),
-                  title: const Text('Dark Mode'),
+                      tp.isDark
+                          ? Icons.dark_mode
+                          : Icons.light_mode,
+                      color: AppColors.navy),
+                  title: Text(l.darkMode),
                   value: tp.isDark,
                   activeColor: AppColors.navy,
                   onChanged: (_) =>
@@ -666,54 +614,51 @@ class _MainNavigationState extends State<MainNavigation>
                 const Divider(height: 1),
                 _drawerItem(
                   icon: Icons.group,
-                  label: 'Staff Management',
-                  subtitle: 'Add staff with PIN + permissions',
+                  label: l.staffManagement,
+                  subtitle: l.addStaff,
                   color: Colors.indigo,
                   onTap: () => _navigate(const StaffScreen()),
                 ),
                 _drawerItem(
                   icon: Icons.cloud_sync,
-                  label: 'Data Sync',
-                  subtitle: 'Backup to Google Drive',
+                  label: l.dataSync,
+                  subtitle: l.backupToGoogleDrive,
                   color: Colors.blue,
                   onTap: () => _navigate(const SyncScreen()),
                 ),
                 const Divider(height: 1),
                 _drawerItem(
                   icon: Icons.store,
-                  label: 'Shop Profile',
-                  subtitle: 'Name, address, GSTIN, UPI',
+                  label: l.shopProfile,
+                  subtitle: l.upiHelperText,
                   color: AppColors.navy,
                   onTap: () =>
                       _navigate(const ShopProfileScreen()),
                 ),
                 _drawerItem(
                   icon: Icons.bar_chart,
-                  label: 'Reports',
-                  subtitle: 'Monthly, weekly, customer',
+                  label: l.reports,
+                  subtitle: '${l.monthlyReport}, ${l.weeklyReport}, ${l.customerReport}',
                   color: Colors.purple,
-                  onTap: () =>
-                      _navigate(const ReportsScreen()),
+                  onTap: () => _navigate(const ReportsScreen()),
                 ),
                 _drawerItem(
                   icon: Icons.inventory,
-                  label: 'Stock Management',
-                  subtitle: 'Track inventory levels',
+                  label: l.stockManagement,
+                  subtitle: l.trackInventory,
                   color: Colors.orange,
-                  onTap: () =>
-                      _navigate(const StockScreen()),
+                  onTap: () => _navigate(const StockScreen()),
                 ),
                 _drawerItem(
                   icon: Icons.backup,
-                  label: 'Backup & Restore',
-                  subtitle: 'Save & restore your data',
+                  label: l.backupRestore,
+                  subtitle: l.saveRestoreData,
                   color: Colors.teal,
-                  onTap: () =>
-                      _navigate(const BackupScreen()),
+                  onTap: () => _navigate(const BackupScreen()),
                 ),
                 _drawerItem(
                   icon: Icons.language,
-                  label: 'Language / भाषा',
+                  label: l.language,
                   subtitle: AppLanguages.names[context
                               .read<LocaleProvider>()
                               .locale
@@ -724,13 +669,14 @@ class _MainNavigationState extends State<MainNavigation>
                       _navigate(const SettingsScreen()),
                 ),
                 const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.info_outline,
+                ListTile(
+                  leading: const Icon(Icons.info_outline,
                       color: Colors.grey),
-                  title: Text('VyapaarX',
-                      style: TextStyle(color: Colors.grey)),
-                  subtitle: Text('Version 1.0.0',
-                      style: TextStyle(fontSize: 11)),
+                  title: Text(l.appTitle,
+                      style:
+                          const TextStyle(color: Colors.grey)),
+                  subtitle: Text(l.version,
+                      style: const TextStyle(fontSize: 11)),
                 ),
               ],
             ),
@@ -768,24 +714,24 @@ class _MainNavigationState extends State<MainNavigation>
         },
       );
 
-  void _navigate(Widget screen) => Navigator.push(context,
-      MaterialPageRoute(builder: (_) => screen));
+  void _navigate(Widget screen) => Navigator.push(
+      context, MaterialPageRoute(builder: (_) => screen));
 }
 
 class AppLanguages {
-  static const List<Locale> supported = [
-    Locale('en'), Locale('hi'), Locale('mr'), Locale('gu'),
-    Locale('ta'), Locale('te'), Locale('bn'), Locale('kn'),
-    Locale('ml'), Locale('pa'), Locale('or'), Locale('ur'),
-    Locale('as'),
-  ];
   static const Map<String, String> names = {
-    'en': 'English', 'hi': 'हिंदी (Hindi)',
-    'mr': 'मराठी (Marathi)', 'gu': 'ગુજરાતી (Gujarati)',
-    'ta': 'தமிழ் (Tamil)', 'te': 'తెలుగు (Telugu)',
-    'bn': 'বাংলা (Bengali)', 'kn': 'ಕನ್ನಡ (Kannada)',
-    'ml': 'മലയാളം (Malayalam)', 'pa': 'ਪੰਜਾਬੀ (Punjabi)',
-    'or': 'ଓଡ଼ିଆ (Odia)', 'ur': 'اردو (Urdu)',
+    'en': 'English',
+    'hi': 'हिंदी (Hindi)',
+    'mr': 'मराठी (Marathi)',
+    'gu': 'ગુજરાતી (Gujarati)',
+    'ta': 'தமிழ் (Tamil)',
+    'te': 'తెలుగు (Telugu)',
+    'bn': 'বাংলা (Bengali)',
+    'kn': 'ಕನ್ನಡ (Kannada)',
+    'ml': 'മലയാളം (Malayalam)',
+    'pa': 'ਪੰਜਾਬੀ (Punjabi)',
+    'or': 'ଓଡ଼ିଆ (Odia)',
+    'ur': 'اردو (Urdu)',
     'as': 'অসমীয়া (Assamese)',
   };
 }
