@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:contacts_service/contacts_service.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../database/app_database.dart';
 import '../main.dart';
@@ -42,7 +42,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return _customers;
     return _customers.where((c) =>
-      c.name.toLowerCase().contains(q) || c.phone.toLowerCase().contains(q)).toList();
+        c.name.toLowerCase().contains(q) ||
+        c.phone.toLowerCase().contains(q)).toList();
   }
 
   Future<void> _callCustomer(String phone) async {
@@ -52,15 +53,17 @@ class _CustomersScreenState extends State<CustomersScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.couldNotLaunchDialer)));
+            SnackBar(content: Text(context.l10n.couldNotLaunchDialer)));
       }
     }
   }
 
   Future<void> _importFromContacts() async {
     final l = context.l10n;
-    final status = await Permission.contacts.request();
-    if (!status.isGranted) {
+
+    // Request contacts permission
+    final granted = await FlutterContacts.requestPermission(readonly: true);
+    if (!granted) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(l.contactsPermissionDenied),
@@ -69,6 +72,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
       }
       return;
     }
+
+    // Show loading
     if (mounted) {
       showDialog(
         context: context,
@@ -76,21 +81,28 @@ class _CustomersScreenState extends State<CustomersScreen> {
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
     }
-    final contacts = await ContactsService.getContacts(withThumbnails: false);
-    if (mounted) Navigator.pop(context);
+
+    // Fetch contacts with phone numbers
+    final contacts = await FlutterContacts.getContacts(
+      withProperties: true,
+      withPhoto: false,
+    );
+
+    if (mounted) Navigator.pop(context); // close loader
 
     final validContacts = contacts
-        .where((c) => c.phones != null && c.phones!.isNotEmpty)
+        .where((c) => c.phones.isNotEmpty)
         .toList()
-      ..sort((a, b) => (a.displayName ?? '').compareTo(b.displayName ?? ''));
+      ..sort((a, b) => a.displayName.compareTo(b.displayName));
 
     if (validContacts.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.noContactsFound)));
+            SnackBar(content: Text(l.noContactsFound)));
       }
       return;
     }
+
     if (!mounted) return;
     await showModalBottomSheet(
       context: context,
@@ -134,10 +146,17 @@ class _CustomersScreenState extends State<CustomersScreen> {
     return null;
   }
 
-  Future<void> _showAddEditDialogPrefilled({String name = '', String phone = ''}) =>
+  Future<void> _showAddEditDialogPrefilled({
+    String name = '',
+    String phone = '',
+  }) =>
       _showAddEditDialog(prefillName: name, prefillPhone: phone);
 
-  Future<void> _showAddEditDialog({Customer? existing, String prefillName = '', String prefillPhone = ''}) async {
+  Future<void> _showAddEditDialog({
+    Customer? existing,
+    String prefillName = '',
+    String prefillPhone = '',
+  }) async {
     final l = context.l10n;
     final nameCtrl = TextEditingController(text: existing?.name ?? prefillName);
     final phoneCtrl = TextEditingController(text: existing?.phone ?? prefillPhone);
@@ -214,9 +233,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l.cancel)),
           ElevatedButton(
-            onPressed: () { if (formKey.currentState!.validate()) Navigator.pop(ctx, true); },
+            onPressed: () {
+              if (formKey.currentState!.validate()) Navigator.pop(ctx, true);
+            },
             child: Text(l.save),
           ),
         ],
@@ -254,9 +277,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l.deleteCustomer),
-        content: Text('${l.deleteCustomer} "${c.name}"? ${l.deleteCustomerConfirm}'),
+        content: Text('"${c.name}"? ${l.deleteCustomerConfirm}'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l.cancel)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
@@ -287,7 +312,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: Center(
               child: Text('${_customers.length}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -308,7 +334,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
               suffixIcon: _query.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
-                      onPressed: () { _searchController.clear(); setState(() => _query = ''); })
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _query = '');
+                      })
                   : null,
             ),
             onChanged: (v) => setState(() => _query = v),
@@ -328,9 +357,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
               child: Row(children: [
                 Icon(Icons.contacts, color: AppColors.navy, size: 20),
                 const SizedBox(width: 10),
-                Expanded(child: Text(l.importFromContacts,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
-                Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.navy.withOpacity(0.5)),
+                Expanded(
+                    child: Text(l.importFromContacts,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w500))),
+                Icon(Icons.arrow_forward_ios,
+                    size: 14, color: AppColors.navy.withOpacity(0.5)),
               ]),
             ),
           ),
@@ -341,10 +373,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
               : _filtered.isEmpty
                   ? Center(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.people_outline, size: 64, color: Colors.grey.shade400),
+                        Icon(Icons.people_outline,
+                            size: 64, color: Colors.grey.shade400),
                         const SizedBox(height: 12),
                         Text(
-                          _customers.isEmpty ? l.noCustomersYet : 'No results for "$_query"',
+                          _customers.isEmpty
+                              ? l.noCustomersYet
+                              : 'No results for "$_query"',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.grey.shade500),
                         ),
@@ -358,7 +393,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         itemBuilder: (ctx, idx) {
                           final c = _filtered[idx];
                           return FutureBuilder<double>(
-                            future: context.read<AppDatabase>().getCustomerOutstanding(c.id),
+                            future: context
+                                .read<AppDatabase>()
+                                .getCustomerOutstanding(c.id),
                             builder: (ctx, snap) {
                               final out = snap.data ?? 0;
                               final exceeded = out > c.creditLimit;
@@ -369,45 +406,67 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                       : AppColors.navy.withOpacity(0.1),
                                   child: Text(c.name[0].toUpperCase(),
                                       style: TextStyle(
-                                          color: exceeded ? Colors.red : AppColors.navy,
+                                          color: exceeded
+                                              ? Colors.red
+                                              : AppColors.navy,
                                           fontWeight: FontWeight.bold)),
                                 ),
                                 title: Text(c.name,
-                                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600)),
                                 subtitle: Text('+91 ${c.phone}'),
-                                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                                  Column(mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Text('Rs.${out.toStringAsFixed(0)}',
-                                            style: TextStyle(
-                                                color: exceeded ? Colors.red : AppColors.navy,
-                                                fontWeight: FontWeight.bold)),
-                                        Text('${l.limit}: Rs.${c.creditLimit.toStringAsFixed(0)}',
-                                            style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                      ]),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    icon: const Icon(Icons.call, size: 18, color: Colors.green),
-                                    onPressed: () => _callCustomer(c.phone),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    icon: Icon(Icons.edit, size: 18, color: AppColors.navy),
-                                    onPressed: () => _showAddEditDialog(existing: c),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
-                                ]),
+                                trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              'Rs.${out.toStringAsFixed(0)}',
+                                              style: TextStyle(
+                                                  color: exceeded
+                                                      ? Colors.red
+                                                      : AppColors.navy,
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                            Text(
+                                              '${l.limit}: Rs.${c.creditLimit.toStringAsFixed(0)}',
+                                              style: const TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey),
+                                            ),
+                                          ]),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(Icons.call,
+                                            size: 18, color: Colors.green),
+                                        onPressed: () =>
+                                            _callCustomer(c.phone),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: Icon(Icons.edit,
+                                            size: 18, color: AppColors.navy),
+                                        onPressed: () =>
+                                            _showAddEditDialog(existing: c),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ]),
                                 onTap: () async {
-                                  await Navigator.push(ctx,
-                                      MaterialPageRoute(builder: (_) =>
-                                          CustomerDetailScreen(customerId: c.id)));
+                                  await Navigator.push(
+                                      ctx,
+                                      MaterialPageRoute(
+                                          builder: (_) => CustomerDetailScreen(
+                                              customerId: c.id)));
                                   _loadCustomers();
                                 },
-                                onLongPress: () => _showAddEditDialog(existing: c),
+                                onLongPress: () =>
+                                    _showAddEditDialog(existing: c),
                               );
                             },
                           );
@@ -420,15 +479,18 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 }
 
+// ── Contact Picker Bottom Sheet ──────────────────────────────────
 class _ContactPickerSheet extends StatefulWidget {
   final List<Contact> contacts;
   final Set<String> existingPhones;
   final Function(String name, String phone) onContactSelected;
+
   const _ContactPickerSheet({
     required this.contacts,
     required this.existingPhones,
     required this.onContactSelected,
   });
+
   @override
   State<_ContactPickerSheet> createState() => _ContactPickerSheetState();
 }
@@ -439,19 +501,22 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
 
   List<Contact> get _filtered {
     if (_search.isEmpty) return widget.contacts;
-    return widget.contacts.where((c) =>
-        (c.displayName ?? '').toLowerCase().contains(_search.toLowerCase()) ||
-        (c.phones?.any((p) =>
-                p.value?.replaceAll(RegExp(r'\D'), '').contains(_search) ??
-                false) ??
-            false)).toList();
+    return widget.contacts
+        .where((c) =>
+            c.displayName.toLowerCase().contains(_search.toLowerCase()) ||
+            c.phones.any((p) =>
+                p.number.replaceAll(RegExp(r'\D'), '').contains(_search)))
+        .toList();
   }
 
   String _cleanPhone(String raw) {
     String digits = raw.replaceAll(RegExp(r'\D'), '');
-    if (digits.startsWith('91') && digits.length == 12) digits = digits.substring(2);
-    if (digits.startsWith('+91')) digits = digits.substring(3);
-    return digits.length > 10 ? digits.substring(digits.length - 10) : digits;
+    if (digits.startsWith('91') && digits.length == 12) {
+      digits = digits.substring(2);
+    }
+    return digits.length > 10
+        ? digits.substring(digits.length - 10)
+        : digits;
   }
 
   @override
@@ -463,15 +528,19 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
       maxChildSize: 0.95,
       builder: (_, ctrl) => Column(children: [
         Container(
-          width: 40, height: 4,
+          width: 40,
+          height: 4,
           margin: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+          decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(children: [
             Text(l.importFromContactsTitle,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 16)),
             const Spacer(),
             Text('${widget.contacts.length} ${l.contacts}',
                 style: const TextStyle(color: Colors.grey, fontSize: 12)),
@@ -499,41 +568,55 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (ctx, i) {
               final contact = _filtered[i];
-              final name = contact.displayName ?? 'Unknown';
-              final rawPhone = contact.phones?.first.value ?? '';
+              final name = contact.displayName;
+              final rawPhone =
+                  contact.phones.isNotEmpty ? contact.phones.first.number : '';
               final phone = _cleanPhone(rawPhone);
               final alreadyAdded = widget.existingPhones.contains(phone);
+
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: alreadyAdded ? Colors.grey.shade200 : AppColors.navy.withOpacity(0.1),
-                  child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                      style: TextStyle(
-                          color: alreadyAdded ? Colors.grey : AppColors.navy,
-                          fontWeight: FontWeight.bold)),
+                  backgroundColor: alreadyAdded
+                      ? Colors.grey.shade200
+                      : AppColors.navy.withOpacity(0.1),
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: TextStyle(
+                        color: alreadyAdded ? Colors.grey : AppColors.navy,
+                        fontWeight: FontWeight.bold),
+                  ),
                 ),
                 title: Text(name,
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: alreadyAdded ? Colors.grey : null)),
-                subtitle: Text(phone.isNotEmpty ? '+91 $phone' : rawPhone),
+                subtitle:
+                    Text(phone.isNotEmpty ? '+91 $phone' : rawPhone),
                 trailing: alreadyAdded
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                             color: Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(6)),
                         child: Text(l.alreadyAdded,
-                            style: const TextStyle(fontSize: 11, color: Colors.grey)))
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.grey)))
                     : ElevatedButton(
-                        onPressed: () => widget.onContactSelected(name, phone),
+                        onPressed: () =>
+                            widget.onContactSelected(name, phone),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        child: Text(l.add, style: const TextStyle(fontSize: 12)),
+                        child: Text(l.add,
+                            style: const TextStyle(fontSize: 12)),
                       ),
-                onTap: alreadyAdded ? null : () => widget.onContactSelected(name, phone),
+                onTap: alreadyAdded
+                    ? null
+                    : () => widget.onContactSelected(name, phone),
               );
             },
           ),
