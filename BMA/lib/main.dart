@@ -12,6 +12,9 @@ import 'screens/reports_screen.dart';
 import 'screens/stock_screen.dart';
 import 'screens/backup_screen.dart';
 import 'screens/shop_profile_screen.dart';
+import 'screens/staff_screen.dart';
+import 'screens/sync_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
