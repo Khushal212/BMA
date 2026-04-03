@@ -13,7 +13,8 @@ class Customers extends Table {
   TextColumn get name => text()();
   TextColumn get phone => text()();
   TextColumn get address => text().nullable()();
-  RealColumn get creditLimit => real().withDefault(const Constant(0))();
+  RealColumn get creditLimit => real().withDefault(const Constant(10000))();
+  RealColumn get defaultPricePercent => real().nullable()();
   RealColumn get defaultGstPercent => real().withDefault(const Constant(0))();
   IntColumn get createdAt => integer()();
 
@@ -24,8 +25,8 @@ class Customers extends Table {
 class Items extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
-  TextColumn get unit => text().withDefault(const Constant('kg'))();
-  RealColumn get defaultRate => real().withDefault(const Constant(0))();
+  TextColumn get unit => text()();
+  RealColumn get defaultRate => real().nullable()();
   RealColumn get gstPercent => real().withDefault(const Constant(0))();
   RealColumn get currentStock => real().withDefault(const Constant(0))();
   RealColumn get lowStockAlert => real().withDefault(const Constant(10))();
@@ -40,13 +41,17 @@ class Invoices extends Table {
   TextColumn get invoiceNo => text()();
   TextColumn get customerId => text()();
   IntColumn get invoiceDate => integer()();
-  RealColumn get subtotal => real().withDefault(const Constant(0))();
+  RealColumn get subtotal => real()();
+  RealColumn get discountPercent => real().withDefault(const Constant(0))();
   RealColumn get discountAmount => real().withDefault(const Constant(0))();
-  RealColumn get gstAmount => real().withDefault(const Constant(0))();
-  RealColumn get total => real().withDefault(const Constant(0))();
+  RealColumn get gstAmount => real()();
+  RealColumn get roundOff => real().withDefault(const Constant(0))();
+  RealColumn get total => real()();
   RealColumn get paidAmount => real().withDefault(const Constant(0))();
-  RealColumn get balanceAmount => real().withDefault(const Constant(0))();
+  RealColumn get balanceAmount => real()();
+  TextColumn get paymentType => text()();
   TextColumn get notes => text().nullable()();
+  TextColumn get pdfPath => text().nullable()();
   TextColumn get createdBy => text().nullable()();
   IntColumn get createdAt => integer()();
 
@@ -59,12 +64,12 @@ class InvoiceLines extends Table {
   TextColumn get invoiceId => text()();
   TextColumn get itemId => text()();
   TextColumn get itemNameSnapshot => text()();
-  TextColumn get unit => text()();
   RealColumn get qty => real()();
+  TextColumn get unit => text()();
   RealColumn get rate => real()();
-  RealColumn get lineGstPercent => real().withDefault(const Constant(0))();
-  RealColumn get lineSubtotal => real().withDefault(const Constant(0))();
-  RealColumn get lineGstAmount => real().withDefault(const Constant(0))();
+  RealColumn get lineSubtotal => real()();
+  RealColumn get lineGstPercent => real()();
+  RealColumn get lineGstAmount => real()();
   RealColumn get lineTotal => real()();
   RealColumn get marginPercent => real().withDefault(const Constant(0))();
 
@@ -77,7 +82,7 @@ class Payments extends Table {
   TextColumn get customerId => text()();
   IntColumn get paymentDate => integer()();
   RealColumn get amount => real()();
-  TextColumn get mode => text().withDefault(const Constant('Cash'))();
+  TextColumn get mode => text()();
   TextColumn get reference => text().nullable()();
   TextColumn get notes => text().nullable()();
   IntColumn get createdAt => integer()();
@@ -97,8 +102,9 @@ class Settings extends Table {
 class StockMovements extends Table {
   TextColumn get id => text()();
   TextColumn get itemId => text()();
+  RealColumn get quantity => real()();
   TextColumn get type => text()();
-  RealColumn get qty => real()();
+  TextColumn get referenceId => text().nullable()();
   TextColumn get notes => text().nullable()();
   IntColumn get createdAt => integer()();
 
@@ -111,7 +117,7 @@ class StaffUsers extends Table {
   TextColumn get name => text()();
   TextColumn get phone => text()();
   TextColumn get pin => text()();
-  TextColumn get role => text().withDefault(const Constant('staff'))();
+  TextColumn get role => text()();
   BoolColumn get canCreateInvoice => boolean().withDefault(const Constant(true))();
   BoolColumn get canViewReports => boolean().withDefault(const Constant(false))();
   BoolColumn get canManageCustomers => boolean().withDefault(const Constant(true))();
@@ -132,14 +138,17 @@ class InvoiceWithCustomer {
   final String customerName;
   final int invoiceDate;
   final double subtotal;
+  final double discountPercent;
   final double discountAmount;
   final double gstAmount;
   final double total;
   final double paidAmount;
   final double balanceAmount;
+  final String paymentType;
   final String? notes;
   final String? createdBy;
   final int createdAt;
+  final List<InvoiceLine> lines;
 
   InvoiceWithCustomer({
     required this.id,
@@ -148,14 +157,17 @@ class InvoiceWithCustomer {
     required this.customerName,
     required this.invoiceDate,
     required this.subtotal,
+    required this.discountPercent,
     required this.discountAmount,
     required this.gstAmount,
     required this.total,
     required this.paidAmount,
     required this.balanceAmount,
+    required this.paymentType,
     this.notes,
     this.createdBy,
     required this.createdAt,
+    this.lines = const [],
   });
 }
 
@@ -251,7 +263,7 @@ class AppDatabase extends _$AppDatabase {
     required String name,
     required String phone,
     String? address,
-    double creditLimit = 0,
+    double creditLimit = 10000,
     double defaultGstPercent = 0,
   }) =>
       into(customers).insert(CustomersCompanion(
@@ -299,7 +311,7 @@ class AppDatabase extends _$AppDatabase {
     required String id,
     required String name,
     required String unit,
-    double defaultRate = 0,
+    double? defaultRate,
     double gstPercent = 0,
     double currentStock = 0,
     double lowStockAlert = 10,
@@ -321,16 +333,22 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteItem(String id) =>
       (delete(items)..where((i) => i.id.equals(id))).go();
 
-  Future<void> addStock(String itemId, double qty, String notes) async {
+  Future<void> addStock({
+    required String itemId,
+    required double quantity,
+    required String type,
+    String? notes,
+  }) async {
     final item = await getItem(itemId);
     if (item == null) return;
+    final delta = (type == 'WASTAGE') ? -quantity.abs() : quantity.abs();
     await (update(items)..where((i) => i.id.equals(itemId)))
-        .write(ItemsCompanion(currentStock: Value(item.currentStock + qty)));
+        .write(ItemsCompanion(currentStock: Value(item.currentStock + delta)));
     await into(stockMovements).insert(StockMovementsCompanion(
       id: Value(DateTime.now().millisecondsSinceEpoch.toString()),
       itemId: Value(itemId),
-      type: const Value('in'),
-      qty: Value(qty),
+      quantity: Value(delta),
+      type: Value(type),
       notes: Value(notes),
       createdAt: Value(DateTime.now().millisecondsSinceEpoch),
     ));
@@ -354,11 +372,13 @@ class AppDatabase extends _$AppDatabase {
     required String customerId,
     required int invoiceDate,
     required double subtotal,
+    double discountPercent = 0,
     required double discountAmount,
     required double gstAmount,
     required double total,
     required double paidAmount,
     required double balanceAmount,
+    required String paymentType,
     String? notes,
     String? createdBy,
     required List<InvoiceLinesCompanion> lines,
@@ -369,11 +389,13 @@ class AppDatabase extends _$AppDatabase {
       customerId: Value(customerId),
       invoiceDate: Value(invoiceDate),
       subtotal: Value(subtotal),
+      discountPercent: Value(discountPercent),
       discountAmount: Value(discountAmount),
       gstAmount: Value(gstAmount),
       total: Value(total),
       paidAmount: Value(paidAmount),
       balanceAmount: Value(balanceAmount),
+      paymentType: Value(paymentType),
       notes: Value(notes),
       createdBy: Value(createdBy),
       createdAt: Value(DateTime.now().millisecondsSinceEpoch),
@@ -395,26 +417,33 @@ class AppDatabase extends _$AppDatabase {
     ])
           ..orderBy([OrderingTerm.desc(invoices.invoiceDate)]))
         .get();
-    return rows.map((r) {
+
+    final result = <InvoiceWithCustomer>[];
+    for (final r in rows) {
       final inv = r.readTable(invoices);
       final cust = r.readTableOrNull(customers);
-      return InvoiceWithCustomer(
+      final lines = await getInvoiceLines(inv.id);
+      result.add(InvoiceWithCustomer(
         id: inv.id,
         invoiceNo: inv.invoiceNo,
         customerId: inv.customerId,
         customerName: cust?.name ?? 'Unknown',
         invoiceDate: inv.invoiceDate,
         subtotal: inv.subtotal,
+        discountPercent: inv.discountPercent,
         discountAmount: inv.discountAmount,
         gstAmount: inv.gstAmount,
         total: inv.total,
         paidAmount: inv.paidAmount,
         balanceAmount: inv.balanceAmount,
+        paymentType: inv.paymentType,
         notes: inv.notes,
         createdBy: inv.createdBy,
         createdAt: inv.createdAt,
-      );
-    }).toList();
+        lines: lines,
+      ));
+    }
+    return result;
   }
 
   Future<List<Invoice>> getCustomerInvoices(String customerId) =>
@@ -510,7 +539,6 @@ class AppDatabase extends _$AppDatabase {
       into(settings).insertOnConflictUpdate(
           SettingsCompanion(key: Value(key), value: Value(value)));
 
-  // alias used by shop_profile_screen
   Future<void> saveSetting(String key, String value) => setSetting(key, value);
 
   Future<Map<String, String>> getAllSettings() async {
@@ -554,9 +582,10 @@ class AppDatabase extends _$AppDatabase {
     final start =
         DateTime(weekStart.year, weekStart.month, weekStart.day)
             .millisecondsSinceEpoch;
-    final end = DateTime(weekStart.year, weekStart.month, weekStart.day + 7)
-        .subtract(const Duration(seconds: 1))
-        .millisecondsSinceEpoch;
+    final end =
+        DateTime(weekStart.year, weekStart.month, weekStart.day + 7)
+            .subtract(const Duration(seconds: 1))
+            .millisecondsSinceEpoch;
     return _getPeriodSummary(start, end);
   }
 
@@ -572,15 +601,13 @@ class AppDatabase extends _$AppDatabase {
         periodInvoices.fold<double>(0.0, (s, i) => s + i.paidAmount);
     final totalPending =
         periodInvoices.fold<double>(0.0, (s, i) => s + i.balanceAmount);
-
-    // Build day-wise sales map
     final dayWiseSales = <String, double>{};
     for (final inv in periodInvoices) {
       final d = DateTime.fromMillisecondsSinceEpoch(inv.invoiceDate);
-      final key = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      final key =
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
       dayWiseSales[key] = (dayWiseSales[key] ?? 0) + inv.total;
     }
-
     return PeriodSummary(
       totalSales: totalSales,
       totalCollected: totalCollected,
@@ -594,32 +621,28 @@ class AppDatabase extends _$AppDatabase {
 
   Future<CustomerReport> getCustomerReport(String customerId) async {
     final invList = await getCustomerInvoices(customerId);
-    final totalBusiness =
-        invList.fold<double>(0.0, (s, i) => s + i.total);
-    final totalPaid =
-        invList.fold<double>(0.0, (s, i) => s + i.paidAmount);
+    final totalBusiness = invList.fold<double>(0.0, (s, i) => s + i.total);
+    final totalPaid = invList.fold<double>(0.0, (s, i) => s + i.paidAmount);
     final outstanding =
         invList.fold<double>(0.0, (s, i) => s + i.balanceAmount);
-
-    // Build item breakdown
     final itemTotals = <String, Map<String, dynamic>>{};
     for (final inv in invList) {
       final lines = await getInvoiceLines(inv.id);
       for (final l in lines) {
         if (!itemTotals.containsKey(l.itemId)) {
           itemTotals[l.itemId] = {
-            'name': l.itemNameSnapshot,
-            'qty': 0.0,
-            'total': 0.0,
+            'itemName': l.itemNameSnapshot,
+            'totalQty': 0.0,
+            'unit': l.unit,
+            'totalAmount': 0.0,
           };
         }
-        itemTotals[l.itemId]!['qty'] =
-            (itemTotals[l.itemId]!['qty'] as double) + l.qty;
-        itemTotals[l.itemId]!['total'] =
-            (itemTotals[l.itemId]!['total'] as double) + l.lineTotal;
+        itemTotals[l.itemId]!['totalQty'] =
+            (itemTotals[l.itemId]!['totalQty'] as double) + l.qty;
+        itemTotals[l.itemId]!['totalAmount'] =
+            (itemTotals[l.itemId]!['totalAmount'] as double) + l.lineTotal;
       }
     }
-
     return CustomerReport(
       totalBusiness: totalBusiness,
       totalPaid: totalPaid,
@@ -699,67 +722,6 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteStaff(String id) =>
       (delete(staffUsers)..where((s) => s.id.equals(id))).go();
-
-  // ── BACKUP ─────────────────────────────────────────────────────
-  Future<Map<String, dynamic>> exportAllData() async {
-    final allInvoices = await getAllInvoices();
-    final invoiceData = <Map<String, dynamic>>[];
-    for (final inv in allInvoices) {
-      final lines = await getInvoiceLines(inv.id);
-      invoiceData.add({
-        'id': inv.id,
-        'invoiceNo': inv.invoiceNo,
-        'customerId': inv.customerId,
-        'invoiceDate': inv.invoiceDate,
-        'subtotal': inv.subtotal,
-        'discountAmount': inv.discountAmount,
-        'gstAmount': inv.gstAmount,
-        'total': inv.total,
-        'paidAmount': inv.paidAmount,
-        'balanceAmount': inv.balanceAmount,
-        'notes': inv.notes,
-        'lines': lines.map((l) => {
-              'id': l.id,
-              'itemId': l.itemId,
-              'itemNameSnapshot': l.itemNameSnapshot,
-              'unit': l.unit,
-              'qty': l.qty,
-              'rate': l.rate,
-              'lineGstPercent': l.lineGstPercent,
-              'lineSubtotal': l.lineSubtotal,
-              'lineGstAmount': l.lineGstAmount,
-              'lineTotal': l.lineTotal,
-            }).toList(),
-      });
-    }
-    return {
-      'customers': (await getAllCustomers())
-          .map((c) => {
-                'id': c.id,
-                'name': c.name,
-                'phone': c.phone,
-                'address': c.address,
-                'creditLimit': c.creditLimit,
-                'defaultGstPercent': c.defaultGstPercent,
-                'createdAt': c.createdAt,
-              })
-          .toList(),
-      'items': (await getAllItems())
-          .map((i) => {
-                'id': i.id,
-                'name': i.name,
-                'unit': i.unit,
-                'defaultRate': i.defaultRate,
-                'gstPercent': i.gstPercent,
-                'currentStock': i.currentStock,
-                'lowStockAlert': i.lowStockAlert,
-                'createdAt': i.createdAt,
-              })
-          .toList(),
-      'invoices': invoiceData,
-      'settings': await getAllSettings(),
-    };
-  }
 }
 
 // ── DB CONNECTION ──────────────────────────────────────────────
