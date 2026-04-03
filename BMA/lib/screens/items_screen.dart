@@ -208,12 +208,13 @@ class _ItemsScreenState extends State<ItemsScreen> {
         gstPercent: gst,
       );
     } else {
-      await db.updateItem(existing.copyWith(
-        name: nameCtrl.text.trim(),
-        unit: unit,
-        defaultRate: Value(rate),
-        gstPercent: gst,
-      ));
+        await db.updateItem(ItemsCompanion(
+          id: Value(existing.id),
+          name: Value(nameCtrl.text.trim()),
+          unit: Value(unit),
+          defaultRate: Value(rate),
+          gstPercent: Value(gst),
+        ));
     }
     _loadItems();
   }
