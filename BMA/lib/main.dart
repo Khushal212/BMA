@@ -159,8 +159,8 @@ class MyApp extends StatelessWidget {
           color: AppColors.white,
         ),
         inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12)),
+          border:
+              OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide:
@@ -239,14 +239,11 @@ class _SplashScreenState extends State<SplashScreen>
     _logoOpacity = Tween<double>(begin: 0, end: 1).animate(
         CurvedAnimation(
             parent: _logoCtrl,
-            curve: const Interval(0.0, 0.5,
-                curve: Curves.easeIn)));
+            curve: const Interval(0.0, 0.5, curve: Curves.easeIn)));
     _textOpacity = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(
-            parent: _textCtrl, curve: Curves.easeIn));
+        CurvedAnimation(parent: _textCtrl, curve: Curves.easeIn));
     _textSlide =
-        Tween<Offset>(
-                begin: const Offset(0, 0.3), end: Offset.zero)
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
             .animate(CurvedAnimation(
                 parent: _textCtrl, curve: Curves.easeOut));
 
@@ -319,8 +316,7 @@ class _SplashScreenState extends State<SplashScreen>
                               width: 2),
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  AppColors.gold.withOpacity(0.3),
+                              color: AppColors.gold.withOpacity(0.3),
                               blurRadius: 30,
                               spreadRadius: 5,
                             ),
@@ -497,8 +493,9 @@ class _MainNavigationState extends State<MainNavigation>
 
     return Scaffold(
       key: _scaffoldKey,
-      drawerEdgeDragWidth:
-          MediaQuery.of(context).size.width * 0.25,
+      // Allow swipe from left edge to open drawer
+      drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.25,
+      drawerEnableOpenDragGesture: true,
       body: FadeTransition(
         opacity: _pageFade,
         child: screens[_selectedIndex],
@@ -540,14 +537,6 @@ class _MainNavigationState extends State<MainNavigation>
           ],
         ),
       ),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton.small(
-              heroTag: 'menu_fab',
-              onPressed: () =>
-                  _scaffoldKey.currentState?.openDrawer(),
-              child: const Icon(Icons.menu),
-            )
-          : null,
       drawer: _buildDrawer(tp, l),
     );
   }
@@ -632,13 +621,13 @@ class _MainNavigationState extends State<MainNavigation>
                   label: l.shopProfile,
                   subtitle: l.upiHelperText,
                   color: AppColors.navy,
-                  onTap: () =>
-                      _navigate(const ShopProfileScreen()),
+                  onTap: () => _navigate(const ShopProfileScreen()),
                 ),
                 _drawerItem(
                   icon: Icons.bar_chart,
                   label: l.reports,
-                  subtitle: '${l.monthlyReport}, ${l.weeklyReport}, ${l.customerReport}',
+                  subtitle:
+                      '${l.monthlyReport}, ${l.weeklyReport}, ${l.customerReport}',
                   color: Colors.purple,
                   onTap: () => _navigate(const ReportsScreen()),
                 ),
@@ -665,16 +654,14 @@ class _MainNavigationState extends State<MainNavigation>
                               .languageCode] ??
                       'English',
                   color: Colors.green,
-                  onTap: () =>
-                      _navigate(const SettingsScreen()),
+                  onTap: () => _navigate(const SettingsScreen()),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.info_outline,
                       color: Colors.grey),
                   title: Text(l.appTitle,
-                      style:
-                          const TextStyle(color: Colors.grey)),
+                      style: const TextStyle(color: Colors.grey)),
                   subtitle: Text(l.version,
                       style: const TextStyle(fontSize: 11)),
                 ),
@@ -704,8 +691,8 @@ class _MainNavigationState extends State<MainNavigation>
         title: Text(label,
             style: const TextStyle(
                 fontWeight: FontWeight.w600, fontSize: 14)),
-        subtitle: Text(subtitle,
-            style: const TextStyle(fontSize: 11)),
+        subtitle:
+            Text(subtitle, style: const TextStyle(fontSize: 11)),
         trailing: const Icon(Icons.chevron_right,
             color: Colors.grey, size: 18),
         onTap: () {
