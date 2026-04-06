@@ -67,18 +67,17 @@ class _DashboardScreenState extends State<DashboardScreen>
               floating: false,
               pinned: true,
               backgroundColor: AppColors.navy,
+              // Builder gives a child context so Scaffold.of() finds
+              // the correct parent Scaffold that owns the drawer
               leading: Builder(
                 builder: (ctx) => IconButton(
-                  icon: const Icon(Icons.menu,
-                      color: AppColors.white),
-                  onPressed: () =>
-                      Scaffold.of(ctx).openDrawer(),
+                  icon: const Icon(Icons.menu, color: AppColors.white),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
                 ),
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.refresh,
-                      color: AppColors.white),
+                  icon: const Icon(Icons.refresh, color: AppColors.white),
                   onPressed: () => setState(() {}),
                 ),
               ],
@@ -109,22 +108,21 @@ class _DashboardScreenState extends State<DashboardScreen>
                             children: [
                               Text(greeting,
                                   style: TextStyle(
-                                      color: Colors.white
-                                          .withOpacity(0.7),
+                                      color:
+                                          Colors.white.withOpacity(0.7),
                                       fontSize: 14)),
                               const SizedBox(height: 4),
                               Text(l.appTitle,
                                   style: const TextStyle(
                                       color: AppColors.white,
                                       fontSize: 26,
-                                      fontWeight:
-                                          FontWeight.bold,
+                                      fontWeight: FontWeight.bold,
                                       letterSpacing: 1)),
                               const SizedBox(height: 4),
                               Text(fmt.format(now),
                                   style: TextStyle(
-                                      color: AppColors.gold
-                                          .withOpacity(0.9),
+                                      color:
+                                          AppColors.gold.withOpacity(0.9),
                                       fontSize: 13)),
                             ],
                           ),
@@ -142,16 +140,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                 builder: (_, child) => Opacity(
                   opacity: _cardsAnim.value,
                   child: Transform.translate(
-                    offset:
-                        Offset(0, 20 * (1 - _cardsAnim.value)),
+                    offset: Offset(0, 20 * (1 - _cardsAnim.value)),
                     child: child,
                   ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // ── Stat Cards ──────────────────────
                       Row(children: [
@@ -183,8 +179,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                               label: l.totalOutstanding,
                               value:
                                   'Rs.${(snap.data ?? 0).toStringAsFixed(0)}',
-                              icon: Icons
-                                  .account_balance_wallet,
+                              icon: Icons.account_balance_wallet,
                               gradient: LinearGradient(colors: [
                                 AppColors.gold.withOpacity(0.8),
                                 AppColors.gold,
@@ -213,32 +208,28 @@ class _DashboardScreenState extends State<DashboardScreen>
                             label: l.newInvoice,
                             color: AppColors.navy,
                             onTap: () =>
-                                MainNavigation.jumpTo(
-                                    context, 3),
+                                MainNavigation.jumpTo(context, 3),
                           ),
                           _QuickAction(
                             icon: Icons.people,
                             label: l.customers,
                             color: AppColors.accent,
                             onTap: () =>
-                                MainNavigation.jumpTo(
-                                    context, 1),
+                                MainNavigation.jumpTo(context, 1),
                           ),
                           _QuickAction(
                             icon: Icons.inventory_2,
                             label: l.items,
                             color: AppColors.gold,
                             onTap: () =>
-                                MainNavigation.jumpTo(
-                                    context, 2),
+                                MainNavigation.jumpTo(context, 2),
                           ),
                           _QuickAction(
                             icon: Icons.history,
                             label: l.history,
                             color: Colors.purple,
                             onTap: () =>
-                                MainNavigation.jumpTo(
-                                    context, 4),
+                                MainNavigation.jumpTo(context, 4),
                           ),
                         ],
                       ),
@@ -260,34 +251,30 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 Icons.calendar_today,
                                 size: 14,
                                 color: AppColors.navy),
-                            label: Text(
-                                fmt.format(_selectedDate),
+                            label: Text(fmt.format(_selectedDate),
                                 style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColors.navy)),
                             onPressed: () async {
-                              final picked =
-                                  await showDatePicker(
+                              final picked = await showDatePicker(
                                 context: context,
                                 initialDate: _selectedDate,
                                 firstDate: DateTime(2020),
                                 lastDate: DateTime.now(),
-                                builder: (ctx, child) =>
-                                    Theme(
+                                builder: (ctx, child) => Theme(
                                   data: Theme.of(ctx).copyWith(
                                     colorScheme:
                                         const ColorScheme.light(
                                       primary: AppColors.navy,
-                                      onPrimary:
-                                          AppColors.white,
+                                      onPrimary: AppColors.white,
                                     ),
                                   ),
                                   child: child!,
                                 ),
                               );
                               if (picked != null) {
-                                setState(() =>
-                                    _selectedDate = picked);
+                                setState(
+                                    () => _selectedDate = picked);
                               }
                             },
                           ),
@@ -296,8 +283,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       const SizedBox(height: 8),
 
                       FutureBuilder<DailySummary>(
-                        future:
-                            db.getDailySummary(_selectedDate),
+                        future: db.getDailySummary(_selectedDate),
                         builder: (ctx, snap) {
                           if (!snap.hasData) {
                             return const Center(
@@ -341,24 +327,21 @@ class _DashboardScreenState extends State<DashboardScreen>
                                           color: Colors
                                               .grey.shade300),
                                       const SizedBox(height: 8),
-                                      Text(
-                                        l.noSalesOnDate,
-                                        style: const TextStyle(
-                                            color: Colors.grey),
-                                      ),
+                                      Text(l.noSalesOnDate,
+                                          style: const TextStyle(
+                                              color:
+                                                  Colors.grey)),
                                     ]),
                                   ),
                                 ),
                               )
                             else
                               ...s.invoices.map((inv) => Card(
-                                    margin:
-                                        const EdgeInsets.only(
-                                            bottom: 8),
+                                    margin: const EdgeInsets.only(
+                                        bottom: 8),
                                     child: Padding(
                                       padding:
-                                          const EdgeInsets.all(
-                                              12),
+                                          const EdgeInsets.all(12),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment
@@ -375,47 +358,42 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                       fontWeight:
                                                           FontWeight
                                                               .bold,
-                                                      fontSize:
-                                                          14,
+                                                      fontSize: 14,
                                                       color: AppColors
                                                           .navy)),
-                                              Text(
-                                                  inv.invoiceNo,
+                                              Text(inv.invoiceNo,
                                                   style: const TextStyle(
-                                                      fontSize:
-                                                          12,
+                                                      fontSize: 12,
                                                       color: Colors
                                                           .grey)),
                                             ],
                                           ),
-                                          const SizedBox(
-                                              height: 6),
-                                          ...inv.lines.map(
-                                              (ln) => Padding(
-                                                    padding: const EdgeInsets
+                                          const SizedBox(height: 6),
+                                          ...inv.lines.map((ln) =>
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets
                                                         .symmetric(
-                                                        vertical:
-                                                            2),
-                                                    child: Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
-                                                      children: [
-                                                        Text(
-                                                            '${ln.itemNameSnapshot} × ${ln.qty} ${ln.unit}',
-                                                            style: const TextStyle(
-                                                                fontSize:
-                                                                    13)),
-                                                        Text(
-                                                            'Rs.${ln.lineTotal.toStringAsFixed(0)}',
-                                                            style: const TextStyle(
-                                                                fontSize:
-                                                                    13)),
-                                                      ],
-                                                    ),
-                                                  )),
-                                          const Divider(
-                                              height: 12),
+                                                        vertical: 2),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                        '${ln.itemNameSnapshot} × ${ln.qty} ${ln.unit}',
+                                                        style: const TextStyle(
+                                                            fontSize:
+                                                                13)),
+                                                    Text(
+                                                        'Rs.${ln.lineTotal.toStringAsFixed(0)}',
+                                                        style: const TextStyle(
+                                                            fontSize:
+                                                                13)),
+                                                  ],
+                                                ),
+                                              )),
+                                          const Divider(height: 12),
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment
@@ -430,10 +408,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                       color: AppColors
                                                           .navy)),
                                               Container(
-                                                padding: const EdgeInsets
-                                                    .symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 3),
+                                                padding:
+                                                    const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 3),
                                                 decoration:
                                                     BoxDecoration(
                                                   color: inv.balanceAmount ==
@@ -448,8 +427,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                               0.15),
                                                   borderRadius:
                                                       BorderRadius
-                                                          .circular(
-                                                              8),
+                                                          .circular(8),
                                                 ),
                                                 child: Text(
                                                   inv.balanceAmount ==
@@ -465,8 +443,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                         : AppColors
                                                             .danger,
                                                     fontWeight:
-                                                        FontWeight
-                                                            .bold,
+                                                        FontWeight.bold,
                                                   ),
                                                 ),
                                               ),
@@ -504,8 +481,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   '${exceeded.length} ${l.creditLimitExceeded}',
                                   style: const TextStyle(
                                       color: AppColors.danger,
-                                      fontWeight:
-                                          FontWeight.bold,
+                                      fontWeight: FontWeight.bold,
                                       fontSize: 14),
                                 ),
                               ]),
@@ -513,11 +489,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ...exceeded.map((c) =>
                                   FutureBuilder<double>(
                                     future: db
-                                        .getCustomerOutstanding(
-                                            c.id),
+                                        .getCustomerOutstanding(c.id),
                                     builder: (ctx, snap) {
-                                      final out =
-                                          snap.data ?? 0;
+                                      final out = snap.data ?? 0;
                                       return Card(
                                         color: AppColors.danger
                                             .withOpacity(0.08),
@@ -526,8 +500,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 bottom: 6),
                                         child: Padding(
                                           padding:
-                                              const EdgeInsets
-                                                  .all(12),
+                                              const EdgeInsets.all(
+                                                  12),
                                           child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment
@@ -537,8 +511,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 CircleAvatar(
                                                   radius: 18,
                                                   backgroundColor:
-                                                      AppColors
-                                                          .danger
+                                                      AppColors.danger
                                                           .withOpacity(
                                                               0.15),
                                                   child: Text(
@@ -564,10 +537,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 'Rs.${out.toStringAsFixed(0)} / Rs.${c.creditLimit.toStringAsFixed(0)}',
                                                 style: const TextStyle(
                                                     color:
-                                                        AppColors
-                                                            .danger,
-                                                    fontSize:
-                                                        12),
+                                                        AppColors.danger,
+                                                    fontSize: 12),
                                               ),
                                             ],
                                           ),
@@ -604,8 +575,7 @@ class _AnimatedStatCard extends StatefulWidget {
       required this.gradient,
       required this.delay});
   @override
-  State<_AnimatedStatCard> createState() =>
-      _AnimatedStatCardState();
+  State<_AnimatedStatCard> createState() => _AnimatedStatCardState();
 }
 
 class _AnimatedStatCardState extends State<_AnimatedStatCard>
@@ -616,12 +586,11 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 500));
+        vsync: this, duration: const Duration(milliseconds: 500));
     _scale = CurvedAnimation(
         parent: _ctrl, curve: Curves.elasticOut);
-    Future.delayed(Duration(milliseconds: widget.delay),
-        () => _ctrl.forward());
+    Future.delayed(
+        Duration(milliseconds: widget.delay), () => _ctrl.forward());
   }
 
   @override
@@ -648,8 +617,7 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(widget.icon,
-                  color: Colors.white70, size: 20),
+              Icon(widget.icon, color: Colors.white70, size: 20),
               const SizedBox(height: 8),
               Text(widget.label,
                   style: const TextStyle(
@@ -732,8 +700,7 @@ class _QuickActionState extends State<_QuickAction>
             Text(widget.label,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500)),
+                    fontSize: 11, fontWeight: FontWeight.w500)),
           ]),
         ),
       );
@@ -750,13 +717,11 @@ class _MiniCard extends StatelessWidget {
         decoration: BoxDecoration(
             color: color.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
-            border:
-                Border.all(color: color.withOpacity(0.2))),
+            border: Border.all(color: color.withOpacity(0.2))),
         child: Column(children: [
           Text(label,
               style: TextStyle(
-                  fontSize: 10,
-                  color: color.withOpacity(0.8)),
+                  fontSize: 10, color: color.withOpacity(0.8)),
               textAlign: TextAlign.center),
           const SizedBox(height: 4),
           Text(value,
