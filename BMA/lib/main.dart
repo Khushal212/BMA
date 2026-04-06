@@ -18,21 +18,19 @@ import 'screens/staff_screen.dart';
 import 'screens/sync_screen.dart';
 import 'screens/settings_screen.dart';
 
-// ── Brand Colors ───────────────────────────────────────────────
 class AppColors {
-  static const navy = Color(0xFF1B2A4A);
-  static const navyDark = Color(0xFF0D1B2A);
+  static const navy      = Color(0xFF1B2A4A);
+  static const navyDark  = Color(0xFF0D1B2A);
   static const navyLight = Color(0xFF2A3F6F);
-  static const gold = Color(0xFFF0A500);
-  static const accent = Color(0xFF4A90D9);
-  static const white = Color(0xFFFFFFFF);
-  static const offWhite = Color(0xFFF5F7FA);
-  static const success = Color(0xFF2ECC71);
-  static const danger = Color(0xFFE74C3C);
-  static const warning = Color(0xFFF39C12);
+  static const gold      = Color(0xFFF0A500);
+  static const accent    = Color(0xFF4A90D9);
+  static const white     = Color(0xFFFFFFFF);
+  static const offWhite  = Color(0xFFF5F7FA);
+  static const success   = Color(0xFF2ECC71);
+  static const danger    = Color(0xFFE74C3C);
+  static const warning   = Color(0xFFF39C12);
 }
 
-// ── Helper extension for easy localization access ──────────────
 extension L10n on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
 }
@@ -43,20 +41,18 @@ void main() async {
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
-  final prefs = await SharedPreferences.getInstance();
+  final prefs    = await SharedPreferences.getInstance();
   final langCode = prefs.getString('language_code') ?? 'en';
-  final isDark = prefs.getBool('dark_mode') ?? false;
-  final db = AppDatabase();
-  runApp(
-    MultiProvider(
-      providers: [
-        Provider<AppDatabase>.value(value: db),
-        ChangeNotifierProvider(create: (_) => LocaleProvider(langCode)),
-        ChangeNotifierProvider(create: (_) => ThemeProvider(isDark)),
-      ],
-      child: const MyApp(),
-    ),
-  );
+  final isDark   = prefs.getBool('dark_mode') ?? false;
+  final db       = AppDatabase();
+  runApp(MultiProvider(
+    providers: [
+      Provider<AppDatabase>.value(value: db),
+      ChangeNotifierProvider(create: (_) => LocaleProvider(langCode)),
+      ChangeNotifierProvider(create: (_) => ThemeProvider(isDark)),
+    ],
+    child: const MyApp(),
+  ));
 }
 
 class LocaleProvider extends ChangeNotifier {
@@ -85,7 +81,6 @@ class ThemeProvider extends ChangeNotifier {
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     final lp = context.watch<LocaleProvider>();
@@ -109,98 +104,98 @@ class MyApp extends StatelessWidget {
   }
 
   ThemeData _buildLightTheme() => ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.navy,
-          primary: AppColors.navy,
-          secondary: AppColors.gold,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: AppColors.offWhite,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.navy,
-          foregroundColor: AppColors.white,
-          centerTitle: true,
-          elevation: 0,
-          systemOverlayStyle: SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-          ),
-          titleTextStyle: TextStyle(
-            color: AppColors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-          ),
-          iconTheme: IconThemeData(color: AppColors.white),
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: AppColors.navy,
-          selectedItemColor: AppColors.gold,
-          unselectedItemColor: Colors.white54,
-          type: BottomNavigationBarType.fixed,
-          elevation: 8,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.navy,
-            foregroundColor: AppColors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
-          ),
-        ),
-        cardTheme: CardTheme(
-          elevation: 3,
-          shadowColor: AppColors.navy.withOpacity(0.15),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-          color: AppColors.white,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          border:
-              OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide:
-                const BorderSide(color: AppColors.navy, width: 2),
-          ),
-        ),
-        floatingActionButtonTheme:
-            const FloatingActionButtonThemeData(
-          backgroundColor: AppColors.gold,
-          foregroundColor: AppColors.navy,
-        ),
-      );
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: AppColors.navy,
+      primary: AppColors.navy,
+      secondary: AppColors.gold,
+      brightness: Brightness.light,
+    ),
+    scaffoldBackgroundColor: AppColors.offWhite,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppColors.navy,
+      foregroundColor: AppColors.white,
+      centerTitle: true,
+      elevation: 0,
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+      ),
+      titleTextStyle: TextStyle(
+        color: AppColors.white,
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.5,
+      ),
+      iconTheme: IconThemeData(color: AppColors.white),
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: AppColors.navy,
+      selectedItemColor: AppColors.gold,
+      unselectedItemColor: Colors.white54,
+      type: BottomNavigationBarType.fixed,
+      elevation: 8,
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.navy,
+        foregroundColor: AppColors.white,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 14),
+      ),
+    ),
+    cardTheme: CardTheme(
+      elevation: 3,
+      shadowColor: AppColors.navy.withOpacity(0.15),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16)),
+      color: AppColors.white,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12)),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide:
+            const BorderSide(color: AppColors.navy, width: 2),
+      ),
+    ),
+    floatingActionButtonTheme:
+        const FloatingActionButtonThemeData(
+      backgroundColor: AppColors.gold,
+      foregroundColor: AppColors.navy,
+    ),
+  );
 
   ThemeData _buildDarkTheme() => ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.navy,
-          primary: AppColors.navyLight,
-          secondary: AppColors.gold,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: const Color(0xFF0F0F1A),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.navyDark,
-          foregroundColor: AppColors.white,
-          elevation: 0,
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: AppColors.navyDark,
-          selectedItemColor: AppColors.gold,
-          unselectedItemColor: Colors.white38,
-          type: BottomNavigationBarType.fixed,
-        ),
-        cardTheme: CardTheme(
-          color: const Color(0xFF1A2340),
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-        ),
-      );
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: AppColors.navy,
+      primary: AppColors.navyLight,
+      secondary: AppColors.gold,
+      brightness: Brightness.dark,
+    ),
+    scaffoldBackgroundColor: const Color(0xFF0F0F1A),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppColors.navyDark,
+      foregroundColor: AppColors.white,
+      elevation: 0,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: AppColors.navyDark,
+      selectedItemColor: AppColors.gold,
+      unselectedItemColor: Colors.white38,
+      type: BottomNavigationBarType.fixed,
+    ),
+    cardTheme: CardTheme(
+      color: const Color(0xFF1A2340),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16)),
+    ),
+  );
 }
 
 // ── Splash Screen ──────────────────────────────────────────────
@@ -212,159 +207,103 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _logoCtrl;
-  late AnimationController _textCtrl;
-  late AnimationController _bgCtrl;
-  late Animation<double> _logoScale;
-  late Animation<double> _logoOpacity;
-  late Animation<double> _textOpacity;
+  late AnimationController _bgCtrl, _logoCtrl, _textCtrl;
+  late Animation<double> _bgOp, _logoScale, _logoOp, _textOp;
   late Animation<Offset> _textSlide;
-  late Animation<double> _bgOpacity;
 
   @override
   void initState() {
     super.initState();
-    _bgCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
-    _logoCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
-    _textCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 700));
-
-    _bgOpacity = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _bgCtrl, curve: Curves.easeIn));
-    _logoScale = Tween<double>(begin: 0.3, end: 1.0).animate(
-        CurvedAnimation(
-            parent: _logoCtrl, curve: Curves.elasticOut));
-    _logoOpacity = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(
-            parent: _logoCtrl,
-            curve: const Interval(0.0, 0.5, curve: Curves.easeIn)));
-    _textOpacity = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _textCtrl, curve: Curves.easeIn));
-    _textSlide =
-        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
-            .animate(CurvedAnimation(
-                parent: _textCtrl, curve: Curves.easeOut));
-
-    _bgCtrl.forward().then((_) {
-      _logoCtrl.forward().then((_) {
-        _textCtrl.forward().then((_) {
-          Future.delayed(const Duration(milliseconds: 800), () {
-            if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) =>
-                      const MainNavigation(),
-                  transitionsBuilder: (_, anim, __, child) =>
-                      FadeTransition(opacity: anim, child: child),
-                  transitionDuration:
-                      const Duration(milliseconds: 600),
-                ),
-              );
-            }
-          });
-        });
-      });
-    });
+    _bgCtrl   = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _logoCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _textCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _bgOp      = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _bgCtrl,   curve: Curves.easeIn));
+    _logoScale = Tween<double>(begin: 0.3, end: 1).animate(CurvedAnimation(parent: _logoCtrl, curve: Curves.elasticOut));
+    _logoOp    = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _logoCtrl,  curve: const Interval(0, 0.5, curve: Curves.easeIn)));
+    _textOp    = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _textCtrl,  curve: Curves.easeIn));
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _textCtrl, curve: Curves.easeOut));
+    _bgCtrl.forward().then((_) =>
+        _logoCtrl.forward().then((_) =>
+            _textCtrl.forward().then((_) =>
+                Future.delayed(const Duration(milliseconds: 800), () {
+                  if (mounted) {
+                    Navigator.pushReplacement(context, PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const MainNavigation(),
+                      transitionsBuilder: (_, anim, __, child) =>
+                          FadeTransition(opacity: anim, child: child),
+                      transitionDuration: const Duration(milliseconds: 600),
+                    ));
+                  }
+                }))));
   }
 
   @override
   void dispose() {
-    _bgCtrl.dispose();
-    _logoCtrl.dispose();
-    _textCtrl.dispose();
+    _bgCtrl.dispose(); _logoCtrl.dispose(); _textCtrl.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: AnimatedBuilder(
-        animation: _bgCtrl,
-        builder: (_, __) => Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.navyDark.withOpacity(_bgOpacity.value),
-                AppColors.navy.withOpacity(_bgOpacity.value),
-                AppColors.navyLight.withOpacity(_bgOpacity.value),
-              ],
-            ),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedBuilder(
-                  animation: _logoCtrl,
-                  builder: (_, __) => Transform.scale(
-                    scale: _logoScale.value,
-                    child: Opacity(
-                      opacity: _logoOpacity.value,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.3),
-                              width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.gold.withOpacity(0.3),
-                              blurRadius: 30,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.store,
-                            size: 60, color: AppColors.gold),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                AnimatedBuilder(
-                  animation: _textCtrl,
-                  builder: (_, __) => SlideTransition(
-                    position: _textSlide,
-                    child: Opacity(
-                      opacity: _textOpacity.value,
-                      child: Column(children: [
-                        const Text('VyapaarX',
-                            style: TextStyle(
-                              color: AppColors.white,
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                            )),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Smart Business Management',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 14,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        _LoadingDots(),
-                      ]),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+  Widget build(BuildContext context) => Scaffold(
+    body: AnimatedBuilder(
+      animation: _bgCtrl,
+      builder: (_, __) => Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.navyDark.withOpacity(_bgOp.value),
+              AppColors.navy.withOpacity(_bgOp.value),
+              AppColors.navyLight.withOpacity(_bgOp.value),
+            ],
           ),
         ),
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            AnimatedBuilder(
+              animation: _logoCtrl,
+              builder: (_, __) => Transform.scale(
+                scale: _logoScale.value,
+                child: Opacity(
+                  opacity: _logoOp.value,
+                  child: Container(
+                    width: 120, height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                    ),
+                    child: const Icon(Icons.store, size: 60, color: AppColors.gold),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            AnimatedBuilder(
+              animation: _textCtrl,
+              builder: (_, __) => SlideTransition(
+                position: _textSlide,
+                child: Opacity(
+                  opacity: _textOp.value,
+                  child: Column(children: [
+                    const Text('VyapaarX',
+                        style: TextStyle(color: AppColors.white, fontSize: 36, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                    const SizedBox(height: 8),
+                    Text('Smart Business Management',
+                        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, letterSpacing: 1)),
+                    const SizedBox(height: 32),
+                    _LoadingDots(),
+                  ]),
+                ),
+              ),
+            ),
+          ]),
+        ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _LoadingDots extends StatefulWidget {
@@ -374,64 +313,59 @@ class _LoadingDots extends StatefulWidget {
 
 class _LoadingDotsState extends State<_LoadingDots>
     with TickerProviderStateMixin {
-  late List<AnimationController> _controllers;
+  late List<AnimationController> _ctrls;
   late List<Animation<double>> _anims;
 
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(
-      3,
-      (i) => AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 600)),
-    );
-    _anims = _controllers
-        .map((c) => Tween<double>(begin: 0, end: 1).animate(
-            CurvedAnimation(parent: c, curve: Curves.easeInOut)))
-        .toList();
+    _ctrls = List.generate(3, (i) => AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600)));
+    _anims = _ctrls.map((c) => Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: c, curve: Curves.easeInOut))).toList();
     for (int i = 0; i < 3; i++) {
       Future.delayed(Duration(milliseconds: i * 200), () {
-        if (mounted) _controllers[i].repeat(reverse: true);
+        if (mounted) _ctrls[i].repeat(reverse: true);
       });
     }
   }
 
   @override
   void dispose() {
-    for (final c in _controllers) c.dispose();
+    for (final c in _ctrls) c.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(3, (i) {
-          return AnimatedBuilder(
-            animation: _anims[i],
-            builder: (_, __) => Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: 8,
-              height: 8 + (_anims[i].value * 6),
-              decoration: BoxDecoration(
-                color: AppColors.gold
-                    .withOpacity(0.4 + _anims[i].value * 0.6),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          );
-        }),
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: List.generate(3, (i) => AnimatedBuilder(
+      animation: _anims[i],
+      builder: (_, __) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        width: 8,
+        height: 8 + (_anims[i].value * 6),
+        decoration: BoxDecoration(
+          color: AppColors.gold.withOpacity(0.4 + _anims[i].value * 0.6),
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    )),
+  );
 }
 
 // ── Main Navigation ────────────────────────────────────────────
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
 
+  // Jump to a tab from any child screen
   static void jumpTo(BuildContext context, int index) {
-    context
-        .findAncestorStateOfType<_MainNavigationState>()
-        ?.jumpTo(index);
+    context.findAncestorStateOfType<_MainNavigationState>()?.jumpTo(index);
+  }
+
+  // Open the drawer from any child screen — this is the key fix
+  static void openDrawer(BuildContext context) {
+    context.findAncestorStateOfType<_MainNavigationState>()?.openDrawer();
   }
 
   @override
@@ -441,8 +375,7 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation>
     with TickerProviderStateMixin {
   int _selectedIndex = 0;
-  final GlobalKey<ScaffoldState> _scaffoldKey =
-      GlobalKey<ScaffoldState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late AnimationController _pageCtrl;
   late Animation<double> _pageFade;
 
@@ -450,10 +383,8 @@ class _MainNavigationState extends State<MainNavigation>
   void initState() {
     super.initState();
     _pageCtrl = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 300));
-    _pageFade = CurvedAnimation(
-        parent: _pageCtrl, curve: Curves.easeInOut);
+        vsync: this, duration: const Duration(milliseconds: 300));
+    _pageFade = CurvedAnimation(parent: _pageCtrl, curve: Curves.easeInOut);
     _pageCtrl.forward();
   }
 
@@ -470,6 +401,9 @@ class _MainNavigationState extends State<MainNavigation>
     });
   }
 
+  // Opens the drawer on the Scaffold that actually owns it
+  void openDrawer() => _scaffoldKey.currentState?.openDrawer();
+
   void _onTabTap(int i) {
     if (i == _selectedIndex) return;
     _pageCtrl.reverse().then((_) {
@@ -481,7 +415,7 @@ class _MainNavigationState extends State<MainNavigation>
   @override
   Widget build(BuildContext context) {
     final tp = context.watch<ThemeProvider>();
-    final l = context.l10n;
+    final l  = context.l10n;
 
     final screens = [
       const DashboardScreen(),
@@ -493,7 +427,7 @@ class _MainNavigationState extends State<MainNavigation>
 
     return Scaffold(
       key: _scaffoldKey,
-      // Allow swipe from left edge to open drawer
+      // Swipe from left edge to open drawer
       drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.25,
       drawerEnableOpenDragGesture: true,
       body: FadeTransition(
@@ -541,135 +475,123 @@ class _MainNavigationState extends State<MainNavigation>
     );
   }
 
-  Widget _buildDrawer(ThemeProvider tp, AppLocalizations l) =>
-      Drawer(
-        child: Column(children: [
+  Widget _buildDrawer(ThemeProvider tp, AppLocalizations l) => Drawer(
+    child: Column(children: [
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(16, 50, 16, 20),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.navyDark, AppColors.navyLight],
+          ),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 50, 16, 20),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.navyDark, AppColors.navyLight],
-              ),
+            width: 56, height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.gold.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: AppColors.gold.withOpacity(0.5), width: 1.5),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                        color: AppColors.gold.withOpacity(0.5),
-                        width: 1.5),
-                  ),
-                  child: const Icon(Icons.store,
-                      color: AppColors.gold, size: 30),
-                ),
-                const SizedBox(height: 12),
-                Text(l.appTitle,
-                    style: const TextStyle(
-                        color: AppColors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1)),
-                Text(l.appSubtitle,
-                    style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
-                        fontSize: 12)),
-              ],
-            ),
+            child: const Icon(Icons.store, color: AppColors.gold, size: 30),
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                SwitchListTile(
-                  secondary: Icon(
-                      tp.isDark
-                          ? Icons.dark_mode
-                          : Icons.light_mode,
-                      color: AppColors.navy),
-                  title: Text(l.darkMode),
-                  value: tp.isDark,
-                  activeColor: AppColors.navy,
-                  onChanged: (_) =>
-                      context.read<ThemeProvider>().toggleTheme(),
-                ),
-                const Divider(height: 1),
-                _drawerItem(
-                  icon: Icons.group,
-                  label: l.staffManagement,
-                  subtitle: l.addStaff,
-                  color: Colors.indigo,
-                  onTap: () => _navigate(const StaffScreen()),
-                ),
-                _drawerItem(
-                  icon: Icons.cloud_sync,
-                  label: l.dataSync,
-                  subtitle: l.backupToGoogleDrive,
-                  color: Colors.blue,
-                  onTap: () => _navigate(const SyncScreen()),
-                ),
-                const Divider(height: 1),
-                _drawerItem(
-                  icon: Icons.store,
-                  label: l.shopProfile,
-                  subtitle: l.upiHelperText,
-                  color: AppColors.navy,
-                  onTap: () => _navigate(const ShopProfileScreen()),
-                ),
-                _drawerItem(
-                  icon: Icons.bar_chart,
-                  label: l.reports,
-                  subtitle:
-                      '${l.monthlyReport}, ${l.weeklyReport}, ${l.customerReport}',
-                  color: Colors.purple,
-                  onTap: () => _navigate(const ReportsScreen()),
-                ),
-                _drawerItem(
-                  icon: Icons.inventory,
-                  label: l.stockManagement,
-                  subtitle: l.trackInventory,
-                  color: Colors.orange,
-                  onTap: () => _navigate(const StockScreen()),
-                ),
-                _drawerItem(
-                  icon: Icons.backup,
-                  label: l.backupRestore,
-                  subtitle: l.saveRestoreData,
-                  color: Colors.teal,
-                  onTap: () => _navigate(const BackupScreen()),
-                ),
-                _drawerItem(
-                  icon: Icons.language,
-                  label: l.language,
-                  subtitle: AppLanguages.names[context
-                              .read<LocaleProvider>()
-                              .locale
-                              .languageCode] ??
-                      'English',
-                  color: Colors.green,
-                  onTap: () => _navigate(const SettingsScreen()),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.info_outline,
-                      color: Colors.grey),
-                  title: Text(l.appTitle,
-                      style: const TextStyle(color: Colors.grey)),
-                  subtitle: Text(l.version,
-                      style: const TextStyle(fontSize: 11)),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: 12),
+          Text(l.appTitle,
+              style: const TextStyle(
+                  color: AppColors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1)),
+          Text(l.appSubtitle,
+              style: TextStyle(
+                  color: Colors.white.withOpacity(0.6), fontSize: 12)),
         ]),
-      );
+      ),
+      Expanded(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            SwitchListTile(
+              secondary: Icon(
+                  tp.isDark ? Icons.dark_mode : Icons.light_mode,
+                  color: AppColors.navy),
+              title: Text(l.darkMode),
+              value: tp.isDark,
+              activeColor: AppColors.navy,
+              onChanged: (_) =>
+                  context.read<ThemeProvider>().toggleTheme(),
+            ),
+            const Divider(height: 1),
+            _drawerItem(
+              icon: Icons.group,
+              label: l.staffManagement,
+              subtitle: l.addStaff,
+              color: Colors.indigo,
+              onTap: () => _navigate(const StaffScreen()),
+            ),
+            _drawerItem(
+              icon: Icons.cloud_sync,
+              label: l.dataSync,
+              subtitle: l.backupToGoogleDrive,
+              color: Colors.blue,
+              onTap: () => _navigate(const SyncScreen()),
+            ),
+            const Divider(height: 1),
+            _drawerItem(
+              icon: Icons.store,
+              label: l.shopProfile,
+              subtitle: l.upiHelperText,
+              color: AppColors.navy,
+              onTap: () => _navigate(const ShopProfileScreen()),
+            ),
+            _drawerItem(
+              icon: Icons.bar_chart,
+              label: l.reports,
+              subtitle:
+                  '${l.monthlyReport}, ${l.weeklyReport}, ${l.customerReport}',
+              color: Colors.purple,
+              onTap: () => _navigate(const ReportsScreen()),
+            ),
+            _drawerItem(
+              icon: Icons.inventory,
+              label: l.stockManagement,
+              subtitle: l.trackInventory,
+              color: Colors.orange,
+              onTap: () => _navigate(const StockScreen()),
+            ),
+            _drawerItem(
+              icon: Icons.backup,
+              label: l.backupRestore,
+              subtitle: l.saveRestoreData,
+              color: Colors.teal,
+              onTap: () => _navigate(const BackupScreen()),
+            ),
+            _drawerItem(
+              icon: Icons.language,
+              label: l.language,
+              subtitle: AppLanguages.names[
+                      context.read<LocaleProvider>().locale.languageCode] ??
+                  'English',
+              color: Colors.green,
+              onTap: () => _navigate(const SettingsScreen()),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading:
+                  const Icon(Icons.info_outline, color: Colors.grey),
+              title: Text(l.appTitle,
+                  style: const TextStyle(color: Colors.grey)),
+              subtitle: Text(l.version,
+                  style: const TextStyle(fontSize: 11)),
+            ),
+          ],
+        ),
+      ),
+    ]),
+  );
 
   Widget _drawerItem({
     required IconData icon,
@@ -680,8 +602,7 @@ class _MainNavigationState extends State<MainNavigation>
   }) =>
       ListTile(
         leading: Container(
-          width: 38,
-          height: 38,
+          width: 38, height: 38,
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
@@ -689,8 +610,7 @@ class _MainNavigationState extends State<MainNavigation>
           child: Icon(icon, color: color, size: 20),
         ),
         title: Text(label,
-            style: const TextStyle(
-                fontWeight: FontWeight.w600, fontSize: 14)),
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         subtitle:
             Text(subtitle, style: const TextStyle(fontSize: 11)),
         trailing: const Icon(Icons.chevron_right,
