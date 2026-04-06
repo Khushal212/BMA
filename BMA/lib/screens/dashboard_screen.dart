@@ -15,8 +15,41 @@ class _DashboardScreenState extends State<DashboardScreen>
   DateTime _selectedDate = DateTime.now();
   late AnimationController _headerCtrl;
   late AnimationController _cardsCtrl;
+  late AnimationController _greetingCtrl;
   late Animation<double> _headerAnim;
   late Animation<double> _cardsAnim;
+  late Animation<double> _greetingFade;
+  late Animation<Offset> _greetingSlide;
+
+  // ── Time-of-day helpers ──────────────────────────────────────
+  static const _morningColors  = [Color(0xFF0D1B2A), Color(0xFF1B3A5C), Color(0xFFE8724A)];
+  static const _afternoonColors = [Color(0xFF1B2A4A), Color(0xFF1E5DB0), Color(0xFF4A90D9)];
+  static const _eveningColors  = [Color(0xFF0A0A1A), Color(0xFF2A1040), Color(0xFF6D3570)];
+  static const _nightColors    = [Color(0xFF050C1E), Color(0xFF0E1F45), Color(0xFF1B2A4A)];
+
+  List<Color> get _skyColors {
+    final h = DateTime.now().hour;
+    if (h >= 6 && h < 12)  return _morningColors;
+    if (h >= 12 && h < 17) return _afternoonColors;
+    if (h >= 17 && h < 21) return _eveningColors;
+    return _nightColors;
+  }
+
+  // Stars for night mode
+  bool get _isNight {
+    final h = DateTime.now().hour;
+    return h >= 21 || h < 6;
+  }
+
+  bool get _isEvening {
+    final h = DateTime.now().hour;
+    return h >= 17 && h < 21;
+  }
+
+  bool get _isMorning {
+    final h = DateTime.now().hour;
+    return h >= 6 && h < 12;
+  }
 
   @override
   void initState() {
@@ -25,20 +58,71 @@ class _DashboardScreenState extends State<DashboardScreen>
         vsync: this, duration: const Duration(milliseconds: 700));
     _cardsCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 800));
+    _greetingCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
+
     _headerAnim =
         CurvedAnimation(parent: _headerCtrl, curve: Curves.easeOut);
     _cardsAnim =
         CurvedAnimation(parent: _cardsCtrl, curve: Curves.easeOut);
+    _greetingFade = Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(parent: _greetingCtrl, curve: Curves.easeOut));
+    _greetingSlide =
+        Tween<Offset>(begin: const Offset(0, 0.4), end: Offset.zero)
+            .animate(CurvedAnimation(
+                parent: _greetingCtrl, curve: Curves.easeOutCubic));
+
     _headerCtrl.forward();
-    Future.delayed(
-        const Duration(milliseconds: 300), () => _cardsCtrl.forward());
+    Future.delayed(const Duration(milliseconds: 200),
+        () => _greetingCtrl.forward());
+    Future.delayed(const Duration(milliseconds: 300),
+        () => _cardsCtrl.forward());
   }
 
   @override
   void dispose() {
     _headerCtrl.dispose();
     _cardsCtrl.dispose();
+    _greetingCtrl.dispose();
     super.dispose();
+  }
+
+  // ── Star painter for night sky ───────────────────────────────
+  Widget _buildStars() {
+    if (!_isNight) return const SizedBox.shrink();
+    return Positioned.fill(
+      child: CustomPaint(painter: _StarPainter()),
+    );
+  }
+
+  // ── Sun / Moon indicator ─────────────────────────────────────
+  Widget _buildCelestialBody() {
+    if (_isNight) {
+      // Moon
+      return Positioned(
+        top: 18, right: 60,
+        child: _MoonWidget(),
+      );
+    }
+    if (_isEvening) {
+      // Setting sun
+      return Positioned(
+        bottom: -20, right: 80,
+        child: _SunWidget(size: 70, opacity: 0.55, color: const Color(0xFFFF7B3A)),
+      );
+    }
+    if (_isMorning) {
+      // Rising sun
+      return Positioned(
+        top: 10, left: 80,
+        child: _SunWidget(size: 50, opacity: 0.65, color: const Color(0xFFFFDE88)),
+      );
+    }
+    // Afternoon sun
+    return Positioned(
+      top: 10, right: 80,
+      child: _SunWidget(size: 55, opacity: 0.6, color: const Color(0xFFFFE44A)),
+    );
   }
 
   @override
@@ -52,7 +136,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         ? l.goodMorning
         : now.hour < 17
             ? l.goodAfternoon
-            : l.goodEvening;
+            : now.hour < 21
+                ? l.goodEvening
+                : l.goodEvening; // reuse goodEvening for night
+
+    final colors = _skyColors;
 
     return Scaffold(
       backgroundColor: AppColors.offWhite,
@@ -63,12 +151,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           slivers: [
             // ── Animated Header ────────────────────────────
             SliverAppBar(
-              expandedHeight: 180,
+              expandedHeight: 200,
               floating: false,
               pinned: true,
-              backgroundColor: AppColors.navy,
-              // Builder gives a child context so Scaffold.of() finds
-              // the correct parent Scaffold that owns the drawer
+              backgroundColor: colors[0],
               leading: Builder(
                 builder: (ctx) => IconButton(
                   icon: const Icon(Icons.menu, color: AppColors.white),
@@ -86,48 +172,87 @@ class _DashboardScreenState extends State<DashboardScreen>
                   animation: _headerAnim,
                   builder: (_, __) => Opacity(
                     opacity: _headerAnim.value,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.navyDark,
-                            AppColors.navy,
-                            AppColors.navyLight,
-                          ],
-                        ),
-                      ),
-                      child: SafeArea(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                              16, 50, 16, 16),
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(greeting,
-                                  style: TextStyle(
-                                      color:
-                                          Colors.white.withOpacity(0.7),
-                                      fontSize: 14)),
-                              const SizedBox(height: 4),
-                              Text(l.appTitle,
-                                  style: const TextStyle(
-                                      color: AppColors.white,
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1)),
-                              const SizedBox(height: 4),
-                              Text(fmt.format(now),
-                                  style: TextStyle(
-                                      color:
-                                          AppColors.gold.withOpacity(0.9),
-                                      fontSize: 13)),
-                            ],
+                    child: Stack(
+                      children: [
+                        // Sky gradient
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: colors,
+                            ),
                           ),
                         ),
-                      ),
+                        // Stars (night only)
+                        _buildStars(),
+                        // Sun / Moon
+                        _buildCelestialBody(),
+                        // Cloud layer (morning/afternoon)
+                        if (!_isNight) ...[
+                          Positioned(
+                            top: 40, left: 30,
+                            child: _CloudWidget(opacity: _isEvening ? 0.15 : 0.18, scale: 1.0),
+                          ),
+                          Positioned(
+                            top: 25, right: 40,
+                            child: _CloudWidget(opacity: _isEvening ? 0.12 : 0.14, scale: 0.7),
+                          ),
+                        ],
+                        // Greeting text
+                        SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 52, 16, 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Animated greeting line
+                                FadeTransition(
+                                  opacity: _greetingFade,
+                                  child: SlideTransition(
+                                    position: _greetingSlide,
+                                    child: Row(
+                                      children: [
+                                        _TimeIcon(hour: now.hour),
+                                        const SizedBox(width: 8),
+                                        Text(greeting,
+                                            style: TextStyle(
+                                                color: Colors.white
+                                                    .withOpacity(0.85),
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w400,
+                                                letterSpacing: 0.3)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                // App name — slides in slightly later
+                                FadeTransition(
+                                  opacity: _greetingFade,
+                                  child: SlideTransition(
+                                    position: _greetingSlide,
+                                    child: Text(l.appTitle,
+                                        style: const TextStyle(
+                                            color: AppColors.white,
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1.2)),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                FadeTransition(
+                                  opacity: _greetingFade,
+                                  child: Text(fmt.format(now),
+                                      style: TextStyle(
+                                          color: AppColors.gold.withOpacity(0.95),
+                                          fontSize: 13)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -154,18 +279,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                         Expanded(
                           child: FutureBuilder<double>(
                             future: db.getTodaysSalesTotal(),
-                            builder: (ctx, snap) =>
-                                _AnimatedStatCard(
+                            builder: (ctx, snap) => _AnimatedStatCard(
                               label: l.todaysSales,
-                              value:
-                                  'Rs.${(snap.data ?? 0).toStringAsFixed(0)}',
+                              value: 'Rs.${(snap.data ?? 0).toStringAsFixed(0)}',
                               icon: Icons.trending_up,
                               gradient: const LinearGradient(
-                                colors: [
-                                  AppColors.navy,
-                                  AppColors.navyLight
-                                ],
-                              ),
+                                  colors: [AppColors.navy, AppColors.navyLight]),
                               delay: 0,
                             ),
                           ),
@@ -174,11 +293,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                         Expanded(
                           child: FutureBuilder<double>(
                             future: db.getTotalOutstanding(),
-                            builder: (ctx, snap) =>
-                                _AnimatedStatCard(
+                            builder: (ctx, snap) => _AnimatedStatCard(
                               label: l.totalOutstanding,
-                              value:
-                                  'Rs.${(snap.data ?? 0).toStringAsFixed(0)}',
+                              value: 'Rs.${(snap.data ?? 0).toStringAsFixed(0)}',
                               icon: Icons.account_balance_wallet,
                               gradient: LinearGradient(colors: [
                                 AppColors.gold.withOpacity(0.8),
@@ -200,36 +317,31 @@ class _DashboardScreenState extends State<DashboardScreen>
                               color: AppColors.navy)),
                       const SizedBox(height: 12),
                       Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceEvenly,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _QuickAction(
                             icon: Icons.receipt_long,
                             label: l.newInvoice,
                             color: AppColors.navy,
-                            onTap: () =>
-                                MainNavigation.jumpTo(context, 3),
+                            onTap: () => MainNavigation.jumpTo(context, 3),
                           ),
                           _QuickAction(
                             icon: Icons.people,
                             label: l.customers,
                             color: AppColors.accent,
-                            onTap: () =>
-                                MainNavigation.jumpTo(context, 1),
+                            onTap: () => MainNavigation.jumpTo(context, 1),
                           ),
                           _QuickAction(
                             icon: Icons.inventory_2,
                             label: l.items,
                             color: AppColors.gold,
-                            onTap: () =>
-                                MainNavigation.jumpTo(context, 2),
+                            onTap: () => MainNavigation.jumpTo(context, 2),
                           ),
                           _QuickAction(
                             icon: Icons.history,
                             label: l.history,
                             color: Colors.purple,
-                            onTap: () =>
-                                MainNavigation.jumpTo(context, 4),
+                            onTap: () => MainNavigation.jumpTo(context, 4),
                           ),
                         ],
                       ),
@@ -238,8 +350,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       // ── Daily Sales Report ───────────────
                       Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(l.dailySalesReport,
                               style: const TextStyle(
@@ -247,14 +358,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   fontSize: 16,
                                   color: AppColors.navy)),
                           TextButton.icon(
-                            icon: const Icon(
-                                Icons.calendar_today,
-                                size: 14,
-                                color: AppColors.navy),
+                            icon: const Icon(Icons.calendar_today,
+                                size: 14, color: AppColors.navy),
                             label: Text(fmt.format(_selectedDate),
                                 style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.navy)),
+                                    fontSize: 12, color: AppColors.navy)),
                             onPressed: () async {
                               final picked = await showDatePicker(
                                 context: context,
@@ -263,8 +371,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 lastDate: DateTime.now(),
                                 builder: (ctx, child) => Theme(
                                   data: Theme.of(ctx).copyWith(
-                                    colorScheme:
-                                        const ColorScheme.light(
+                                    colorScheme: const ColorScheme.light(
                                       primary: AppColors.navy,
                                       onPrimary: AppColors.white,
                                     ),
@@ -273,8 +380,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 ),
                               );
                               if (picked != null) {
-                                setState(
-                                    () => _selectedDate = picked);
+                                setState(() => _selectedDate = picked);
                               }
                             },
                           ),
@@ -287,28 +393,24 @@ class _DashboardScreenState extends State<DashboardScreen>
                         builder: (ctx, snap) {
                           if (!snap.hasData) {
                             return const Center(
-                                child:
-                                    CircularProgressIndicator(
-                                        color: AppColors.navy));
+                                child: CircularProgressIndicator(
+                                    color: AppColors.navy));
                           }
                           final s = snap.data!;
                           return Column(children: [
                             Row(children: [
                               Expanded(
-                                  child: _MiniCard(
-                                      l.totalSales,
+                                  child: _MiniCard(l.totalSales,
                                       'Rs.${s.totalSales.toStringAsFixed(0)}',
                                       AppColors.navy)),
                               const SizedBox(width: 8),
                               Expanded(
-                                  child: _MiniCard(
-                                      l.collected,
+                                  child: _MiniCard(l.collected,
                                       'Rs.${s.collected.toStringAsFixed(0)}',
                                       AppColors.accent)),
                               const SizedBox(width: 8),
                               Expanded(
-                                  child: _MiniCard(
-                                      l.pending,
+                                  child: _MiniCard(l.pending,
                                       'Rs.${s.pending.toStringAsFixed(0)}',
                                       AppColors.danger)),
                             ]),
@@ -316,64 +418,49 @@ class _DashboardScreenState extends State<DashboardScreen>
                             if (s.invoices.isEmpty)
                               Card(
                                 child: Padding(
-                                  padding:
-                                      const EdgeInsets.all(20),
+                                  padding: const EdgeInsets.all(20),
                                   child: Center(
                                     child: Column(children: [
-                                      Icon(
-                                          Icons
-                                              .receipt_long_outlined,
+                                      Icon(Icons.receipt_long_outlined,
                                           size: 40,
-                                          color: Colors
-                                              .grey.shade300),
+                                          color: Colors.grey.shade300),
                                       const SizedBox(height: 8),
                                       Text(l.noSalesOnDate,
                                           style: const TextStyle(
-                                              color:
-                                                  Colors.grey)),
+                                              color: Colors.grey)),
                                     ]),
                                   ),
                                 ),
                               )
                             else
                               ...s.invoices.map((inv) => Card(
-                                    margin: const EdgeInsets.only(
-                                        bottom: 8),
+                                    margin: const EdgeInsets.only(bottom: 8),
                                     child: Padding(
-                                      padding:
-                                          const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(12),
                                       child: Column(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment
-                                                .start,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             mainAxisAlignment:
-                                                MainAxisAlignment
-                                                    .spaceBetween,
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(
-                                                  inv.customerName,
+                                              Text(inv.customerName,
                                                   style: const TextStyle(
                                                       fontWeight:
-                                                          FontWeight
-                                                              .bold,
+                                                          FontWeight.bold,
                                                       fontSize: 14,
-                                                      color: AppColors
-                                                          .navy)),
+                                                      color: AppColors.navy)),
                                               Text(inv.invoiceNo,
                                                   style: const TextStyle(
                                                       fontSize: 12,
-                                                      color: Colors
-                                                          .grey)),
+                                                      color: Colors.grey)),
                                             ],
                                           ),
                                           const SizedBox(height: 6),
-                                          ...inv.lines.map((ln) =>
-                                              Padding(
+                                          ...inv.lines.map((ln) => Padding(
                                                 padding:
-                                                    const EdgeInsets
-                                                        .symmetric(
+                                                    const EdgeInsets.symmetric(
                                                         vertical: 2),
                                                 child: Row(
                                                   mainAxisAlignment:
@@ -383,67 +470,50 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                     Text(
                                                         '${ln.itemNameSnapshot} × ${ln.qty} ${ln.unit}',
                                                         style: const TextStyle(
-                                                            fontSize:
-                                                                13)),
+                                                            fontSize: 13)),
                                                     Text(
                                                         'Rs.${ln.lineTotal.toStringAsFixed(0)}',
                                                         style: const TextStyle(
-                                                            fontSize:
-                                                                13)),
+                                                            fontSize: 13)),
                                                   ],
                                                 ),
                                               )),
                                           const Divider(height: 12),
                                           Row(
                                             mainAxisAlignment:
-                                                MainAxisAlignment
-                                                    .spaceBetween,
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
                                                   '${l.total}: Rs.${inv.total.toStringAsFixed(0)}',
                                                   style: const TextStyle(
                                                       fontWeight:
-                                                          FontWeight
-                                                              .bold,
-                                                      color: AppColors
-                                                          .navy)),
+                                                          FontWeight.bold,
+                                                      color: AppColors.navy)),
                                               Container(
                                                 padding:
-                                                    const EdgeInsets
-                                                        .symmetric(
+                                                    const EdgeInsets.symmetric(
                                                         horizontal: 8,
                                                         vertical: 3),
-                                                decoration:
-                                                    BoxDecoration(
-                                                  color: inv.balanceAmount ==
-                                                          0
-                                                      ? AppColors
-                                                          .success
-                                                          .withOpacity(
-                                                              0.15)
-                                                      : AppColors
-                                                          .danger
-                                                          .withOpacity(
-                                                              0.15),
+                                                decoration: BoxDecoration(
+                                                  color: inv.balanceAmount == 0
+                                                      ? AppColors.success
+                                                          .withOpacity(0.15)
+                                                      : AppColors.danger
+                                                          .withOpacity(0.15),
                                                   borderRadius:
-                                                      BorderRadius
-                                                          .circular(8),
+                                                      BorderRadius.circular(8),
                                                 ),
                                                 child: Text(
-                                                  inv.balanceAmount ==
-                                                          0
+                                                  inv.balanceAmount == 0
                                                       ? l.paidStatus
                                                       : '${l.due}: Rs.${inv.balanceAmount.toStringAsFixed(0)}',
                                                   style: TextStyle(
                                                     fontSize: 11,
-                                                    color: inv.balanceAmount ==
-                                                            0
-                                                        ? AppColors
-                                                            .success
-                                                        : AppColors
-                                                            .danger,
-                                                    fontWeight:
-                                                        FontWeight.bold,
+                                                    color:
+                                                        inv.balanceAmount == 0
+                                                            ? AppColors.success
+                                                            : AppColors.danger,
+                                                    fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
                                               ),
@@ -461,21 +531,16 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       // ── Credit Alerts ────────────────────
                       FutureBuilder<List<Customer>>(
-                        future:
-                            db.getExceededCreditLimitCustomers(),
+                        future: db.getExceededCreditLimitCustomers(),
                         builder: (ctx, snap) {
                           final exceeded = snap.data ?? [];
-                          if (exceeded.isEmpty)
-                            return const SizedBox();
+                          if (exceeded.isEmpty) return const SizedBox();
                           return Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(children: [
-                                const Icon(
-                                    Icons.warning_amber,
-                                    color: AppColors.danger,
-                                    size: 20),
+                                const Icon(Icons.warning_amber,
+                                    color: AppColors.danger, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${exceeded.length} ${l.creditLimitExceeded}',
@@ -486,22 +551,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 ),
                               ]),
                               const SizedBox(height: 8),
-                              ...exceeded.map((c) =>
-                                  FutureBuilder<double>(
-                                    future: db
-                                        .getCustomerOutstanding(c.id),
+                              ...exceeded.map((c) => FutureBuilder<double>(
+                                    future:
+                                        db.getCustomerOutstanding(c.id),
                                     builder: (ctx, snap) {
                                       final out = snap.data ?? 0;
                                       return Card(
                                         color: AppColors.danger
                                             .withOpacity(0.08),
-                                        margin:
-                                            const EdgeInsets.only(
-                                                bottom: 6),
+                                        margin: const EdgeInsets.only(
+                                            bottom: 6),
                                         child: Padding(
                                           padding:
-                                              const EdgeInsets.all(
-                                                  12),
+                                              const EdgeInsets.all(12),
                                           child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment
@@ -512,32 +574,26 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                   radius: 18,
                                                   backgroundColor:
                                                       AppColors.danger
-                                                          .withOpacity(
-                                                              0.15),
+                                                          .withOpacity(0.15),
                                                   child: Text(
-                                                    c.name[0]
-                                                        .toUpperCase(),
+                                                    c.name[0].toUpperCase(),
                                                     style: const TextStyle(
-                                                        color: AppColors
-                                                            .danger,
+                                                        color:
+                                                            AppColors.danger,
                                                         fontWeight:
-                                                            FontWeight
-                                                                .bold),
+                                                            FontWeight.bold),
                                                   ),
                                                 ),
-                                                const SizedBox(
-                                                    width: 10),
+                                                const SizedBox(width: 10),
                                                 Text(c.name,
                                                     style: const TextStyle(
                                                         fontWeight:
-                                                            FontWeight
-                                                                .bold)),
+                                                            FontWeight.bold)),
                                               ]),
                                               Text(
                                                 'Rs.${out.toStringAsFixed(0)} / Rs.${c.creditLimit.toStringAsFixed(0)}',
                                                 style: const TextStyle(
-                                                    color:
-                                                        AppColors.danger,
+                                                    color: AppColors.danger,
                                                     fontSize: 12),
                                               ),
                                             ],
@@ -563,6 +619,145 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 }
 
+// ── Time icon that changes with hour ──────────────────────────
+class _TimeIcon extends StatelessWidget {
+  final int hour;
+  const _TimeIcon({required this.hour});
+
+  @override
+  Widget build(BuildContext context) {
+    IconData icon;
+    Color color;
+    if (hour >= 6 && hour < 12) {
+      icon = Icons.wb_sunny_outlined;
+      color = const Color(0xFFFFDE88);
+    } else if (hour >= 12 && hour < 17) {
+      icon = Icons.wb_sunny;
+      color = const Color(0xFFFFE44A);
+    } else if (hour >= 17 && hour < 21) {
+      icon = Icons.wb_twilight;
+      color = const Color(0xFFFF9B6A);
+    } else {
+      icon = Icons.nights_stay_outlined;
+      color = const Color(0xFFB0C8FF);
+    }
+    return Icon(icon, color: color, size: 18);
+  }
+}
+
+// ── Sun widget ────────────────────────────────────────────────
+class _SunWidget extends StatelessWidget {
+  final double size, opacity;
+  final Color color;
+  const _SunWidget(
+      {required this.size, required this.opacity, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: opacity,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          boxShadow: [
+            BoxShadow(color: color.withOpacity(0.5), blurRadius: size * 0.5, spreadRadius: size * 0.1),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Moon widget ───────────────────────────────────────────────
+class _MoonWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: CustomPaint(painter: _MoonPainter()),
+    );
+  }
+}
+
+class _MoonPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0xFFE8E0C8);
+    canvas.drawCircle(Offset(size.width * 0.5, size.height * 0.5), size.width * 0.45, paint);
+    final cut = Paint()..color = const Color(0xFF0E1F45);
+    canvas.drawCircle(Offset(size.width * 0.7, size.height * 0.35), size.width * 0.38, cut);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+// ── Star painter ──────────────────────────────────────────────
+class _StarPainter extends CustomPainter {
+  static const _stars = [
+    [0.12, 0.15], [0.25, 0.08], [0.38, 0.22], [0.55, 0.06],
+    [0.68, 0.18], [0.78, 0.10], [0.88, 0.25], [0.05, 0.35],
+    [0.45, 0.30], [0.62, 0.38], [0.82, 0.42], [0.20, 0.40],
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white.withOpacity(0.75);
+    for (final s in _stars) {
+      canvas.drawCircle(
+          Offset(s[0] * size.width, s[1] * size.height), 1.4, paint);
+    }
+    final bright = Paint()..color = Colors.white.withOpacity(0.95);
+    final bigStars = [[0.15, 0.25], [0.60, 0.12], [0.90, 0.35]];
+    for (final s in bigStars) {
+      canvas.drawCircle(
+          Offset(s[0] * size.width, s[1] * size.height), 2.2, bright);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+// ── Cloud widget ──────────────────────────────────────────────
+class _CloudWidget extends StatelessWidget {
+  final double opacity, scale;
+  const _CloudWidget({required this.opacity, required this.scale});
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.scale(
+      scale: scale,
+      child: Opacity(
+        opacity: opacity,
+        child: SizedBox(
+          width: 100,
+          height: 40,
+          child: CustomPaint(painter: _CloudPainter()),
+        ),
+      ),
+    );
+  }
+}
+
+class _CloudPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = Colors.white;
+    canvas.drawOval(Rect.fromCenter(center: Offset(size.width * 0.5, size.height * 0.55), width: size.width * 0.9, height: size.height * 0.6), p);
+    canvas.drawOval(Rect.fromCenter(center: Offset(size.width * 0.3, size.height * 0.45), width: size.width * 0.5, height: size.height * 0.65), p);
+    canvas.drawOval(Rect.fromCenter(center: Offset(size.width * 0.68, size.height * 0.4), width: size.width * 0.55, height: size.height * 0.7), p);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+// ── Animated stat card ────────────────────────────────────────
 class _AnimatedStatCard extends StatefulWidget {
   final String label, value;
   final IconData icon;
@@ -587,8 +782,8 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
     super.initState();
     _ctrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 500));
-    _scale = CurvedAnimation(
-        parent: _ctrl, curve: Curves.elasticOut);
+    _scale =
+        CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     Future.delayed(
         Duration(milliseconds: widget.delay), () => _ctrl.forward());
   }
@@ -634,6 +829,7 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
       );
 }
 
+// ── Quick action button ───────────────────────────────────────
 class _QuickAction extends StatefulWidget {
   final IconData icon;
   final String label;
@@ -684,8 +880,7 @@ class _QuickActionState extends State<_QuickAction>
               decoration: BoxDecoration(
                 color: widget.color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: widget.color.withOpacity(0.2)),
+                border: Border.all(color: widget.color.withOpacity(0.2)),
                 boxShadow: [
                   BoxShadow(
                       color: widget.color.withOpacity(0.1),
@@ -693,8 +888,7 @@ class _QuickActionState extends State<_QuickAction>
                       offset: const Offset(0, 3))
                 ],
               ),
-              child: Icon(widget.icon,
-                  size: 26, color: widget.color),
+              child: Icon(widget.icon, size: 26, color: widget.color),
             ),
             const SizedBox(height: 6),
             Text(widget.label,
@@ -706,14 +900,14 @@ class _QuickActionState extends State<_QuickAction>
       );
 }
 
+// ── Mini stat card ────────────────────────────────────────────
 class _MiniCard extends StatelessWidget {
   final String label, value;
   final Color color;
   const _MiniCard(this.label, this.value, this.color);
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(
-            vertical: 10, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
             color: color.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
